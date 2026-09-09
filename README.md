@@ -80,6 +80,13 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 
 装完后在 Claude Code 里输入 `/lzy help` 查看用法。
 
+### 跨平台说明
+
+已实测环境：**macOS**。其他平台理论支持情况：
+
+- `lzy-video-to-text`：**明确支持 Windows**（`setup_env.py` 内置 Windows 安装路径：`winget install Gyan.FFmpeg`、yt-dlp、faster-whisper 跨平台后端 CPU/CUDA 均可）。Linux 同理。
+- `lzy-douyin-teardown`：ffmpeg / whisper / CLAP 在 Windows 均可安装，bash 脚本在 Git Bash 下可跑；**卡点是 bsk（BrowserSkill）**——抖音登录抓取目前只在 macOS 验证过，Windows 可用性未验证。
+
 > 当前版本：lzy 1.1.1 / douyin-teardown 1.0.1 / video-to-text 1.0.1
 
 ## 目录结构
