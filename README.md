@@ -10,6 +10,52 @@
 | `lzy-douyin-teardown` | 抖音爆款拆解对比：爆款 vs 非爆款对照组，18 元素 + 扩展维度，输出规律报告 |
 | `lzy-video-to-text` | 视频转文字：URL/本地文件 → TXT，本地 Whisper，行业词库纠错，免费离线 |
 
+## 方法详解
+
+### 1️⃣ lzy-douyin-teardown · 抖音爆款拆解对比
+
+给一个抖音账号主页，自动拆解「爆款 vs 非爆款」到底差在哪。核心方法论是**对照组思维**：不是看"爆款长什么样"，而是找"爆款有而普通条没有的变量"——没有对照组的拆解全是幸存者偏差。
+
+**它自动做的事**：抓主页作品列表 → 按点赞选样（爆款 Top N / 非爆款末 N）→ 批量下载视频 + 抽帧 + Whisper 转写 + CLAP 音频分类 → 按 18 元素（含扩展维度）逐条对比 → 输出规律报告。
+
+**用法**：
+
+```
+/lzy-douyin-teardown <抖音主页链接> [爆款N] [对照N]
+例：/lzy-douyin-teardown https://www.douyin.com/user/xxxx 10 10
+```
+
+**产出**：`拆解对比_<账号名>_爆款vs非爆款.md` 规律报告 + 全部视频素材（帧图/转写稿/数据 json）。每条结论标注验证程度（🔴实锤 / 🟡疑似 / ⚠️推测），不编数据。
+
+**前提**：本机已装 BrowserSkill(bsk) 并登录抖音；首次运行会自动跑 `scripts/setup_env.py --install` 体检并装齐 ffmpeg/whisper/CLAP。
+
+### 2️⃣ lzy-video-to-text · 视频转文字（本地免费版）
+
+把视频（URL 或本地文件）转写成纯文本稿。**全程本地、免费、离线**——不依赖任何第三方付费服务（无需鲸剪/VIP），用本机 Whisper 模型转写。
+
+**支持**：YouTube / B站 / 网课 / 直链 mp4 / 本地 mp4·mov·mkv 等。
+**不支持**：直播、微信视频号 App 内嵌、付费加密视频。
+
+**用法**：
+
+```
+/lzy-video-to-text <视频URL或本地路径> [选项]
+例：/lzy-video-to-text https://www.bilibili.com/video/BVxxxx --domain shortvideo
+例：/lzy-video-to-text ~/Desktop/口播.mp4 --timestamps
+```
+
+**常用选项**：
+- `--domain shortvideo|health|drug|business` —— 行业词库纠错（行业内容必加，否则专业术语全是错字）
+- `--timestamps` —— 输出带 `[mm:ss]` 时间戳的分段稿
+- `--model turbo|large-v3|medium|small` —— 转写模型档位（默认 turbo）
+- `--outdir <目录> --title <标题>` —— 归档到指定目录，文件名自动加日期前缀
+
+**前提**：首次使用先跑 `python3 scripts/setup_env.py --install`，依赖装进技能自带的 `.venv`，不污染全局环境。
+
+### 3️⃣ lzy · 工具箱入口（装完即用，零依赖）
+
+只做路由不做分析。`/lzy help` 看全部用法；`/lzy <方法名> [参数]` 直接调用方法；也可以直接描述需求（如贴个抖音主页链接），入口会自动路由。里面还写了「如何新增一个方法」的规范——以后新的自媒体分析方法都往这个工具箱里沉淀。
+
 ## 快速安装
 
 如果你在用 Claude Code（或任何 AI 编程工具），直接对 AI 说：
