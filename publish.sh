@@ -50,5 +50,14 @@ git commit -q -m "$MSG"
 echo "→ push 到 GitHub"
 git push -q origin HEAD:main
 
+echo "→ 验证远端（防显示异常）"
+LOCAL_SHA="$(git rev-parse --short HEAD)"
+REMOTE_SHA="$(git ls-remote -q origin refs/heads/main | cut -c1-7)"
+echo "   本地 HEAD：$LOCAL_SHA  远端 HEAD：$REMOTE_SHA"
+if [ "$LOCAL_SHA" != "$REMOTE_SHA" ]; then
+  echo "❌ 远端与本地不一致，推送可能失败，请检查"
+  exit 1
+fi
+
 echo "✅ 已发布：$REPO"
 echo "   提交说明：$MSG"
