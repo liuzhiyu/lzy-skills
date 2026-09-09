@@ -19,6 +19,8 @@ bash lzy-skills/install.sh
 
 装完后在 Claude Code 里输入 `/lzy help` 查看用法。
 
+> 当前版本：lzy 1.1.1 / douyin-teardown 1.0.1 / video-to-text 1.0.1
+
 ## 目录结构
 
 ```
