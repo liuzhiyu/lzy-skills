@@ -10,12 +10,27 @@
 | `lzy-douyin-teardown` | 抖音爆款拆解对比：爆款 vs 非爆款对照组，18 元素 + 扩展维度，输出规律报告 |
 | `lzy-video-to-text` | 视频转文字：URL/本地文件 → TXT，本地 Whisper，行业词库纠错，免费离线 |
 
-## 安装 / 更新
+## 快速安装
+
+如果你在用 Claude Code（或任何 AI 编程工具），直接对 AI 说：
+
+> 帮我安装这个 skill：https://github.com/liuzhiyu/lzy-skills
+
+不用 AI 工具的话，手动一条命令：
 
 ```bash
-git clone https://github.com/liuzhiyu/lzy-skills.git
-bash lzy-skills/install.sh
+git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.sh
 ```
+
+`install.sh` 把 `skills/` 下所有 `lzy-*` 复制到 `~/.claude/skills/`，幂等可重复执行（再次运行即更新）。
+
+### 环境依赖（重要）
+
+| 技能 | 装完即用 | 需要额外环境 |
+|---|---|---|
+| `lzy` 入口 | ✅ | 无 |
+| `lzy-video-to-text` | ❌ | ffmpeg + whisper（重依赖技能，转写用；首次使用时让 AI 引导安装） |
+| `lzy-douyin-teardown` | ❌ | bsk（BrowserSkill，需登录抖音）+ ffmpeg + whisper + 抽帧/音频分类环境 |
 
 装完后在 Claude Code 里输入 `/lzy help` 查看用法。
 
@@ -32,6 +47,6 @@ skills/
 
 ## 机制
 
-- **版本检查**：每个技能根目录有 `VERSION`，`scripts/check_update.sh` 每天最多联网查一次远端版本，有更新时提示。私有仓库场景下读取本机 `~/.workbuddy/.lzy-github-token` 做认证（勿外泄）。
+- **版本检查**：每个技能根目录有 `VERSION`，`scripts/check_update.sh` 每天最多联网查一次远端版本，有更新时提示。仓库公开、匿名可读；若本机存在 `~/.workbuddy/.lzy-github-token` 会带认证请求（仅作者机器需要）。
 - **发布**：本地 `~/.claude/skills/lzy*` 是源；改完跑 `validate.sh` 校验 → 升 `VERSION` → `publish.sh` 自动 clone 到 /tmp → 同步 → 校验 → commit → push。
 - **新增方法**：见 `skills/lzy/SKILL.md` 的「如何新增一个方法」。
