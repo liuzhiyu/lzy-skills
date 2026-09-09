@@ -32,6 +32,6 @@ fi
 
 LOCAL="$(tr -d '[:space:]' < "$VERSION_FILE")"
 if [ "$REMOTE" != "$LOCAL" ]; then
-  echo "UPDATE_AVAILABLE 当前=$LOCAL 远端=$REMOTE（GitHub: $OWNER/$REPO，可让 AI 同步更新或重跑 install.sh）"
+  echo "UPDATE_AVAILABLE 当前=$LOCAL 远端=${REMOTE}（GitHub: $OWNER/${REPO}，可让 AI 同步更新或重跑 install.sh）"
 fi
 exit 0
