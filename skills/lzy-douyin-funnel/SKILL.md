@@ -195,3 +195,4 @@ $WORK/
 
 - shell 脚本原为 zsh（`${0:A:h}` 取目录），移植时已改为 bash 兼容写法（`$(cd "$(dirname "$0")" && pwd)`），bash/zsh/Git Bash 通用。
 - jieba 优先装进技能自带 `.venv`（与其他 lzy 子技能的 setup_env 约定一致）；作者机器上也可直接复用 WorkBuddy 默认 venv。
+- pip 25 安装 jieba 在部分环境报 `EEXIST: file already exists, mkdir .../pip-install-*/jieba_*`（wheel 解包已知问题，--no-cache-dir/--no-binary 均无效）。setup_env.py 已内置兜底：pip 失败后自动从机器上任何已有 jieba 的 site-packages 复制（纯 Python 包跨 venv 通用）。

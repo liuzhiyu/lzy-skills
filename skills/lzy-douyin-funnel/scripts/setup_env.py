@@ -33,6 +33,41 @@ def jieba_ok(py):
         return False
 
 
+def find_jieba_dir():
+    """在常见位置搜索已安装的 jieba（纯 Python 包，跨 venv 复制可用）"""
+    import glob
+    patterns = [
+        os.path.expanduser("~/.workbuddy/binaries/python/envs/*/lib/python3.*/site-packages/jieba"),
+        os.path.expanduser("~/.claude/skills/*/lib/python3.*/site-packages/jieba"),
+        "/opt/homebrew/lib/python3*/site-packages/jieba",
+        "/usr/local/lib/python3*/site-packages/jieba",
+        os.path.expanduser("~/Library/Python/*/lib/python/site-packages/jieba"),
+    ]
+    for pat in patterns:
+        hits = sorted(glob.glob(pat))
+        if hits:
+            return hits[0]
+    return None
+
+
+def copy_jieba(dst_venv):
+    """从已有安装复制 jieba 到目标 venv 的 site-packages（pip 安装失败时的兜底）"""
+    import glob
+    import shutil
+    src = find_jieba_dir()
+    if not src:
+        return False
+    sp = glob.glob(os.path.join(dst_venv, "lib", "python3.*", "site-packages")) or \
+        glob.glob(os.path.join(dst_venv, "Lib", "site-packages"))
+    if not sp:
+        return False
+    try:
+        shutil.copytree(src, os.path.join(sp[0], "jieba"), dirs_exist_ok=True)
+        return jieba_ok(venv_python())
+    except Exception:
+        return False
+
+
 def main():
     install = "--install" in sys.argv
     problems = []
@@ -74,7 +109,13 @@ def main():
                 print(f"→ 创建 .venv: {VENV}")
                 subprocess.run([sys.executable, "-m", "venv", VENV], check=True)
             print("→ pip install jieba（进 .venv）")
-            subprocess.run([vp, "-m", "pip", "install", "-q", "jieba"], check=True)
+            pip_ok = subprocess.run([vp, "-m", "pip", "install", "-q", "--no-cache-dir", "jieba"]).returncode == 0
+            if not pip_ok:
+                # pip 对 jieba 的 wheel 解包在部分环境会 EEXIST 失败（pip 25 已知问题）
+                # 兜底：从机器上任何已有 jieba 的 venv/site-packages 复制（纯 Python 包，跨 venv 通用）
+                print("→ pip 安装失败，尝试从已有环境复制 jieba（纯 Python 包）")
+                if not copy_jieba(VENV):
+                    raise RuntimeError("pip 安装与复制兜底均失败，请手动安装：pip install jieba")
             print("[ok] jieba 已装进 .venv")
         except Exception as e:
             print(f"[fail] 自动安装失败: {e}")
