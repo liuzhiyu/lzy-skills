@@ -32,8 +32,8 @@ for d in "$SRC"/lzy "$SRC"/lzy-*; do
   rsync -a --delete --exclude '.venv' --exclude '__pycache__' --exclude '.DS_Store' "$d/" "skills/$name/"
 done
 
-# 工具脚本与文档以本地镜像为准，一并发布
-for f in validate.sh install.sh publish.sh README.md .gitignore; do
+# 工具脚本与文档以本地镜像为准，一并发布（新增根目录文档时记得加进这个清单）
+for f in validate.sh install.sh publish.sh README.md CHANGELOG.md .gitignore; do
   [ -f "$SELF/$f" ] && cp "$SELF/$f" "$WORK/repo/$f"
 done
 
