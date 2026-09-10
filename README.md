@@ -9,6 +9,7 @@
 | `lzy` | 工具箱主入口（路由 + help + 新增方法规范） |
 | `lzy-douyin-teardown` | 抖音爆款拆解对比：爆款 vs 非爆款对照组，18 元素 + 扩展维度，输出规律报告 |
 | `lzy-douyin-funnel` | 抖音搜索词完整漏斗：Top100 内容生态 landscape + 评论区客资识别，合并 HTML 报告 |
+| `lzy-script-coach` | 智宇师兄大号口播文案校正：主题闸门 + 七项体检 + 最小改动改写，基于 23 条真实视频规律 |
 | `lzy-video-to-text` | 视频转文字：URL/本地文件 → TXT，本地 Whisper，行业词库纠错，免费离线 |
 
 ## 方法详解
@@ -139,7 +140,7 @@ skills/
 ├── lzy/                  入口：路由表 + help + 新增方法规范 + 发布流程
 ├── lzy-douyin-teardown/  抖音爆款拆解（SKILL.md + scripts/ + VERSION）
 ├── lzy-douyin-funnel/    抖音搜索词漏斗（SKILL.md + scripts/ + config_* + VERSION）
-├── lzy-script-coach/    口播文案校正（SKILL.md + VERSION，零依赖）
+├── lzy-script-coach/     口播文案校正（SKILL.md + VERSION，零依赖）
 └── lzy-video-to-text/    视频转文字（SKILL.md + scripts/ + glossary/ + VERSION）
 ```
 
