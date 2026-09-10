@@ -57,5 +57,12 @@ for d in "$SK"/lzy-*; do
   grep -q "$name" "$SK/lzy/SKILL.md" 2>/dev/null || echo "⚠️  $name 未出现在入口 SKILL.md 中（路由表/用法说明需回填）"
 done
 
+# 8. CHANGELOG.md 必须存在且含今天的条目（无当日条目时警告）
+if [ ! -s "$BASE/CHANGELOG.md" ]; then
+  echo "❌ CHANGELOG.md 缺失——发布前必须记录本次改动"; FAIL=$((FAIL+1))
+elif ! grep -q "$(date +%Y-%m-%d)" "$BASE/CHANGELOG.md"; then
+  echo "⚠️  CHANGELOG.md 没有今天的条目——若本次有技能版本变化，先补一节再发布"
+fi
+
 if [ "$FAIL" -eq 0 ]; then echo "✅ 全部校验通过"; else echo "⛔ 共 $FAIL 处问题，禁止发布"; fi
 exit "$FAIL"

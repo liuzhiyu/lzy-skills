@@ -106,8 +106,9 @@ lzy 自媒体方法论工具箱 · 用法
 1. **改文件**：直接改 `~/.claude/skills/lzy*` 下的任何文件。
 2. **测试**：跑 `bash ~/WorkBuddy/lzy-skills/validate.sh`（自动校验 frontmatter、脚本语法、引用完整性、版本号格式），全绿才继续。
 3. **升版本**：改对应技能的 `VERSION`（小修 +0.0.1，加方法/大改 +0.1.0）。
-4. **发布**：跑 `bash ~/WorkBuddy/lzy-skills/publish.sh "本次改动说明"`——它会自动：clone 仓库到 /tmp → 从 `~/.claude/skills/` 同步所有 lzy 技能 → 再跑一遍校验 → commit + push → 清理临时目录。
-5. **告知用户**：一句话说清改了什么、版本从多少升到多少。
+4. **记 CHANGELOG（必做，不许跳过）**：在 `~/WorkBuddy/lzy-skills/CHANGELOG.md` 顶部加一节，格式照现有条目：`## <日期> · <一句话主题>（各技能新版本号）`，条目用「新增 / 优化 / 修复」前缀一行一条。只改了 README/CHANGELOG 本身、没有任何技能版本变化时可不加节。
+5. **发布**：跑 `bash ~/WorkBuddy/lzy-skills/publish.sh "本次改动说明"`——它会自动：clone 仓库到 /tmp → 从 `~/.claude/skills/` 同步所有 lzy 技能 → 再跑一遍校验 → commit + push → 清理临时目录。
+6. **告知用户**：一句话说清改了什么、版本从多少升到多少。
 
 认证：GitHub token 存于 `~/.workbuddy/.lzy-github-token`（权限 repo+read:org，勿外泄、勿提交进仓库）。过期或失效时重新走设备码授权。
 
