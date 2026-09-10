@@ -80,7 +80,7 @@ lzy 自媒体方法论工具箱 · 用法
 1. **建子技能目录**：`~/.claude/skills/lzy-<方法名>/`，命名用英文短横线（如 `lzy-xhs-teardown`、`lzy-comment-mining`）。
 2. **写 SKILL.md**：frontmatter 至少含 `name`（= 目录名）和 `description`（写清做什么 + 触发词，中英文都要有）。正文写完整工作流、分析框架、踩坑记录——踩坑记录是这个技能集最值钱的部分，每次实操发现新坑必须当天回写。
 3. **脚本放 `scripts/`**：可程序化的部分写成脚本；判断类的部分留给主 Agent 亲自做（目视、语义判断不外包）。脚本里引用外部环境用 `$HOME` 绝对路径 + 环境变量可覆盖。
-4. **加 VERSION 和 check_update.sh**：从任意现有 lzy 技能复制 `scripts/check_update.sh`，技能根目录建 `VERSION` 文件（语义化版本 `主.次.修`）。
+4. **加 check_update.sh**：从任意现有 lzy 技能复制 `scripts/check_update.sh`。**不需要建 VERSION 文件**——整套技能共用一个主版本号，存在入口 `lzy/VERSION` 里。
 5. **回填路由表和用法说明**：路由表加一行，入口的「用法说明」代码块也同步加一段。
 6. **发布到 GitHub**（见下方「发布与迭代」）。
 7. **只沉淀验证过的方法**：框架没跑过真实数据、结论没经过对照组检验的，先不进这个集子。
@@ -105,8 +105,8 @@ lzy 自媒体方法论工具箱 · 用法
 
 1. **改文件**：直接改 `~/.claude/skills/lzy*` 下的任何文件。
 2. **测试**：跑 `bash ~/WorkBuddy/lzy-skills/validate.sh`（自动校验 frontmatter、脚本语法、引用完整性、版本号格式），全绿才继续。
-3. **升版本**：改对应技能的 `VERSION`（小修 +0.0.1，加方法/大改 +0.1.0）。
-4. **记 CHANGELOG（必做，不许跳过）**：在 `~/WorkBuddy/lzy-skills/CHANGELOG.md` 顶部加一节，格式照现有条目：`## <日期> · <一句话主题>（各技能新版本号）`，条目用「新增 / 优化 / 修复」前缀一行一条。只改了 README/CHANGELOG 本身、没有任何技能版本变化时可不加节。
+3. **升版本**：只改入口 `~/.claude/skills/lzy/VERSION`——这是**全工具箱的主版本号**，所有子技能共用（小修 +0.0.1，加方法/大改 +0.1.0）。子技能目录里不再有各自的 VERSION。
+4. **记 CHANGELOG（必做，不许跳过）**：在 `~/WorkBuddy/lzy-skills/CHANGELOG.md` 顶部加一节，格式照现有条目：`## <主版本号> 🚀（<日期>）`，条目用「新增 / 优化 / 修复」前缀一行一条。只改了 README/CHANGELOG 本身、没有升主版本号时可不加节。
 5. **发布**：跑 `bash ~/WorkBuddy/lzy-skills/publish.sh "本次改动说明"`——它会自动：clone 仓库到 /tmp → 从 `~/.claude/skills/` 同步所有 lzy 技能 → 再跑一遍校验 → commit + push → 清理临时目录。
 6. **告知用户**：一句话说清改了什么、版本从多少升到多少。
 

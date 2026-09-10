@@ -10,10 +10,14 @@ for d in "$SK"/lzy "$SK"/lzy-*; do
   [ -d "$d" ] || continue
   name="$(basename "$d")"
 
-  # 1. VERSION 存在且是语义化版本
-  v="$(tr -d '[:space:]' < "$d/VERSION" 2>/dev/null || true)"
-  if ! printf '%s' "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-    echo "❌ $name: VERSION 缺失或格式错（got: '$v'）"; FAIL=$((FAIL+1))
+  # 1. 主版本号：只有入口 lzy 有 VERSION；其他子技能不应有
+  if [ "$name" = "lzy" ]; then
+    v="$(tr -d '[:space:]' < "$d/VERSION" 2>/dev/null || true)"
+    if ! printf '%s' "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+      echo "❌ lzy: 主版本号 VERSION 缺失或格式错（got: '$v'）"; FAIL=$((FAIL+1))
+    fi
+  elif [ -f "$d/VERSION" ]; then
+    echo "⚠️  $name: 不应再有独立 VERSION（主版本号统一在 lzy/VERSION）——请删除该文件"
   fi
 
   # 2. SKILL.md 存在且 frontmatter name == 目录名

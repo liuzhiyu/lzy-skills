@@ -153,22 +153,22 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 - `lzy-video-to-text`：**明确支持 Windows**（`setup_env.py` 内置 Windows 安装路径：`winget install Gyan.FFmpeg`、yt-dlp、faster-whisper 跨平台后端 CPU/CUDA 均可）。Linux 同理。
 - `lzy-douyin-funnel` / `lzy-douyin-teardown` / `lzy-account-archive`：各自依赖在 Windows 均可安装，bash 脚本在 Git Bash 下可跑；**共同卡点是 bsk（BrowserSkill）**——抖音/小红书登录抓取目前只在 macOS 验证过，Windows 可用性未验证。
 
-> 当前版本：lzy 1.4.1 / douyin-teardown 1.0.1 / douyin-funnel 1.0.0 / script-coach 1.0.0 / account-archive 1.1.0 / video-to-text 1.1.0
+> 当前版本：**2.0.0**（全工具箱统一主版本号，存于 `skills/lzy/VERSION`）
 
 ## 目录结构
 
 ```
 skills/
-├── lzy/                  入口：路由表 + help + 新增方法规范 + 发布流程
-├── lzy-douyin-teardown/  抖音爆款拆解（SKILL.md + scripts/ + VERSION）
-├── lzy-douyin-funnel/    抖音搜索词漏斗（SKILL.md + scripts/ + config_* + VERSION）
-├── lzy-script-coach/     口播文案校正（SKILL.md + VERSION，零依赖）
-├── lzy-account-archive/  账号存量归档（SKILL.md + scripts/ + VERSION；数据仓库在技能目录外）
-└── lzy-video-to-text/    视频转文字（SKILL.md + scripts/ + glossary/ + VERSION）
+├── lzy/                  入口：路由表 + help + 新增方法规范 + 发布流程 + 主版本号 VERSION
+├── lzy-douyin-teardown/  抖音爆款拆解（SKILL.md + scripts/）
+├── lzy-douyin-funnel/    抖音搜索词漏斗（SKILL.md + scripts/ + config_*）
+├── lzy-script-coach/     口播文案校正（SKILL.md，零依赖）
+├── lzy-account-archive/  账号存量归档（SKILL.md + scripts/；数据仓库在技能目录外）
+└── lzy-video-to-text/    视频转文字（SKILL.md + scripts/ + glossary/）
 ```
 
 ## 机制
 
-- **版本检查**：每个技能根目录有 `VERSION`，`scripts/check_update.sh` 每天最多联网查一次远端版本，有更新时提示。仓库公开、匿名可读；若本机存在 `~/.workbuddy/.lzy-github-token` 会带认证请求（仅作者机器需要）。
-- **发布**：本地 `~/.claude/skills/lzy*` 是源；改完跑 `validate.sh` 校验 → 升 `VERSION` → `publish.sh` 自动 clone 到 /tmp → 同步 → 校验 → commit → push。
+- **版本检查**：全工具箱共用一个主版本号（`skills/lzy/VERSION`），子技能不带独立版本。任何技能的 `scripts/check_update.sh` 每天最多联网查一次远端主版本，不一致就提示整体更新。仓库公开、匿名可读；若本机存在 `~/.workbuddy/.lzy-github-token` 会带认证请求（仅作者机器需要）。
+- **发布**：本地 `~/.claude/skills/lzy*` 是源；改完跑 `validate.sh` 校验 → 升 `lzy/VERSION` 主版本号 → 记 `CHANGELOG.md` → `publish.sh` 自动 clone 到 /tmp → 同步 → 校验 → commit → push。
 - **新增方法**：见 `skills/lzy/SKILL.md` 的「如何新增一个方法」。
