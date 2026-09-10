@@ -52,7 +52,26 @@
 
 **前提**：bsk CLI（BrowserSkill，需登录抖音）；首次运行 `python3 scripts/setup_env.py --install` 自动装 jieba（进技能自带 .venv）。
 
-### 3️⃣ lzy-video-to-text · 视频转文字（本地免费版）
+### 3️⃣ lzy-script-coach · 智宇师兄大号口播文案校正
+
+贴一段口播文案，AI 按真实数据规律做校正审核。**不是通用短视频常识，是 2026/7–9 共 23 条真实发布视频回归出来的规律**，且持续回写迭代（被推翻的结论标记作废保留，防止走回头路）。
+
+**校正流程**：
+1. **主题闸门**（两层）：闸门一否决跑题方向（影视/行业观察/个人感悟，实测只有流量幻觉）；闸门二强制改写「模型/清单/通用道理」型内容
+2. **七项体检打分**（第 1 项翻倍）：开场切入、「我」的位置、诊断型动作、重新定义问题、反清单体、单点聚焦、嘴替——外加爹味自检、开头钩子三选一、同轴检查、案例铁律
+3. **最小改动改写**：保留用户判断和原话，只调结构与开场；改写稿干净可直接拿去拍
+4. 附「自嗨急救」：写嗨了怎么用写前锚定 + 三步转换拉回框架
+
+**用法**：
+
+```
+/lzy-script-coach <口播文案（粘贴全文或文件路径）>
+```
+
+**适用范围**：仅大号「智宇师兄」（服务老板/ToB，目标拿客户）；小号超短句打法不适用。
+**环境依赖**：零。纯方法论技能，装完即用。
+
+### 4️⃣ lzy-video-to-text · 视频转文字（本地免费版）
 
 把视频（URL 或本地文件）转写成纯文本稿。**全程本地、免费、离线**——不依赖任何第三方付费服务（无需鲸剪/VIP），用本机 Whisper 模型转写。
 
@@ -75,7 +94,7 @@
 
 **前提**：首次使用先跑 `python3 scripts/setup_env.py --install`，依赖装进技能自带的 `.venv`，不污染全局环境。
 
-### 4️⃣ lzy · 工具箱入口（装完即用，零依赖）
+### 5️⃣ lzy · 工具箱入口（装完即用，零依赖）
 
 只做路由不做分析。`/lzy help` 看全部用法；`/lzy <方法名> [参数]` 直接调用方法；也可以直接描述需求（如贴个抖音主页链接），入口会自动路由。里面还写了「如何新增一个方法」的规范——以后新的自媒体分析方法都往这个工具箱里沉淀。
 
@@ -97,7 +116,7 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 
 | 技能 | 装完即用 | 需要额外环境 |
 |---|---|---|
-| `lzy` 入口 | ✅ | 无 |
+| `lzy` 入口 / `lzy-script-coach` | ✅ | 无（纯方法论，零依赖） |
 | `lzy-video-to-text` | ❌ | ffmpeg + whisper（重依赖技能，转写用；首次使用时让 AI 引导安装） |
 | `lzy-douyin-funnel` | ❌ | bsk（BrowserSkill，需登录抖音）+ Python + jieba（setup_env.py 自动装进 .venv） |
 | `lzy-douyin-teardown` | ❌ | bsk（BrowserSkill，需登录抖音）+ ffmpeg + whisper + 抽帧/音频分类环境 |
@@ -111,7 +130,7 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 - `lzy-video-to-text`：**明确支持 Windows**（`setup_env.py` 内置 Windows 安装路径：`winget install Gyan.FFmpeg`、yt-dlp、faster-whisper 跨平台后端 CPU/CUDA 均可）。Linux 同理。
 - `lzy-douyin-funnel` / `lzy-douyin-teardown`：各自依赖在 Windows 均可安装，bash 脚本在 Git Bash 下可跑；**共同卡点是 bsk（BrowserSkill）**——抖音登录抓取目前只在 macOS 验证过，Windows 可用性未验证。
 
-> 当前版本：lzy 1.2.0 / douyin-teardown 1.0.1 / douyin-funnel 1.0.0 / video-to-text 1.0.1
+> 当前版本：lzy 1.3.0 / douyin-teardown 1.0.1 / douyin-funnel 1.0.0 / script-coach 1.0.0 / video-to-text 1.0.1
 
 ## 目录结构
 
@@ -120,6 +139,7 @@ skills/
 ├── lzy/                  入口：路由表 + help + 新增方法规范 + 发布流程
 ├── lzy-douyin-teardown/  抖音爆款拆解（SKILL.md + scripts/ + VERSION）
 ├── lzy-douyin-funnel/    抖音搜索词漏斗（SKILL.md + scripts/ + config_* + VERSION）
+├── lzy-script-coach/    口播文案校正（SKILL.md + VERSION，零依赖）
 └── lzy-video-to-text/    视频转文字（SKILL.md + scripts/ + glossary/ + VERSION）
 ```
 
