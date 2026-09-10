@@ -153,7 +153,7 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 - `lzy-video-to-text`：**明确支持 Windows**（`setup_env.py` 内置 Windows 安装路径：`winget install Gyan.FFmpeg`、yt-dlp、faster-whisper 跨平台后端 CPU/CUDA 均可）。Linux 同理。
 - `lzy-douyin-funnel` / `lzy-douyin-teardown` / `lzy-account-archive`：各自依赖在 Windows 均可安装，bash 脚本在 Git Bash 下可跑；**共同卡点是 bsk（BrowserSkill）**——抖音/小红书登录抓取目前只在 macOS 验证过，Windows 可用性未验证。
 
-> 当前版本：lzy 1.4.0 / douyin-teardown 1.0.1 / douyin-funnel 1.0.0 / script-coach 1.0.0 / account-archive 1.1.0 / video-to-text 1.1.0
+> 当前版本：lzy 1.4.1 / douyin-teardown 1.0.1 / douyin-funnel 1.0.0 / script-coach 1.0.0 / account-archive 1.1.0 / video-to-text 1.1.0
 
 ## 目录结构
 
