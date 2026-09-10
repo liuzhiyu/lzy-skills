@@ -10,6 +10,7 @@
 | `lzy-douyin-teardown` | 抖音爆款拆解对比：爆款 vs 非爆款对照组，18 元素 + 扩展维度，输出规律报告 |
 | `lzy-douyin-funnel` | 抖音搜索词完整漏斗：Top100 内容生态 landscape + 评论区客资识别，合并 HTML 报告 |
 | `lzy-script-coach` | 智宇师兄大号口播文案校正：主题闸门 + 七项体检 + 最小改动改写，基于 23 条真实视频规律 |
+| `lzy-account-archive` | 账号存量归档：抖音/小红书 90 天作品（标题/全文/指标）入持久仓库，之后增量抓取 |
 | `lzy-video-to-text` | 视频转文字：URL/本地文件 → TXT，本地 Whisper，行业词库纠错，免费离线 |
 
 ## 方法详解
@@ -72,7 +73,27 @@
 **适用范围**：仅大号「智宇师兄」（服务老板/ToB，目标拿客户）；小号超短句打法不适用。
 **环境依赖**：零。纯方法论技能，装完即用。
 
-### 4️⃣ lzy-video-to-text · 视频转文字（本地免费版）
+### 4️⃣ lzy-account-archive · 账号存量归档（90 天 + 增量）
+
+给一个抖音或小红书账号，把作品抓进**本地持久数据仓库**：首次抓最近 90 天全部视频/笔记（标题 + 正文全文 + 赞评转藏指标），以后每次只抓**增量**——存量不重抓，当天发布的不收（数据未定型，明天自然会收）。
+
+**它自动做的事**：定位账号主页 → 建仓 → 抓作品列表 → `pending` 增量过滤（只留没归档过的）→ 逐条抓详情（bsk 读 SSR 数据提取全文/日期/指标）→ `merge` 入库（去重 / 缺日期拒收 / 指标变化自动留 history）→ `STATUS.md` 汇报（总数/日期范围/点赞 Top5/缺正文提醒）。
+
+**用法**：
+
+```
+/lzy-account-archive <账号主页链接或名称> [平台]
+例：/lzy-account-archive https://www.douyin.com/user/MS4wLjABAAAA... 
+例：/lzy-account-archive 某某说健康 小红书
+```
+
+**产出**：`~/WorkBuddy/lzy-data/accounts/<平台>/<账号>/` 下的 `posts.jsonl`（全部作品，含指标历史）+ `STATUS.md` 摘要 + `raw/` 原始抓取产物。仓库建好后，其他分析方法（拆解/漏斗/Eval）都可以直接从这里取数。
+
+**硬规则**：增量优先（已归档绝不重抓）、当天不收、merge 是唯一入库口、抓不到的字段留空不编 0。
+
+**前提**：bsk CLI（对应平台登录一次）；python3 标准库即可，无第三方依赖。
+
+### 5️⃣ lzy-video-to-text · 视频转文字（本地免费版）
 
 把视频（URL 或本地文件）转写成纯文本稿。**全程本地、免费、离线**——不依赖任何第三方付费服务（无需鲸剪/VIP），用本机 Whisper 模型转写。
 
@@ -95,7 +116,7 @@
 
 **前提**：首次使用先跑 `python3 scripts/setup_env.py --install`，依赖装进技能自带的 `.venv`，不污染全局环境。
 
-### 5️⃣ lzy · 工具箱入口（装完即用，零依赖）
+### 6️⃣ lzy · 工具箱入口（装完即用，零依赖）
 
 只做路由不做分析。`/lzy help` 看全部用法；`/lzy <方法名> [参数]` 直接调用方法；也可以直接描述需求（如贴个抖音主页链接），入口会自动路由。里面还写了「如何新增一个方法」的规范——以后新的自媒体分析方法都往这个工具箱里沉淀。
 
@@ -118,6 +139,7 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 | 技能 | 装完即用 | 需要额外环境 |
 |---|---|---|
 | `lzy` 入口 / `lzy-script-coach` | ✅ | 无（纯方法论，零依赖） |
+| `lzy-account-archive` | ❌ | bsk（对应平台登录一次）+ python3 标准库（无第三方依赖） |
 | `lzy-video-to-text` | ❌ | ffmpeg + whisper（重依赖技能，转写用；首次使用时让 AI 引导安装） |
 | `lzy-douyin-funnel` | ❌ | bsk（BrowserSkill，需登录抖音）+ Python + jieba（setup_env.py 自动装进 .venv） |
 | `lzy-douyin-teardown` | ❌ | bsk（BrowserSkill，需登录抖音）+ ffmpeg + whisper + 抽帧/音频分类环境 |
@@ -129,9 +151,9 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 已实测环境：**macOS**。其他平台理论支持情况：
 
 - `lzy-video-to-text`：**明确支持 Windows**（`setup_env.py` 内置 Windows 安装路径：`winget install Gyan.FFmpeg`、yt-dlp、faster-whisper 跨平台后端 CPU/CUDA 均可）。Linux 同理。
-- `lzy-douyin-funnel` / `lzy-douyin-teardown`：各自依赖在 Windows 均可安装，bash 脚本在 Git Bash 下可跑；**共同卡点是 bsk（BrowserSkill）**——抖音登录抓取目前只在 macOS 验证过，Windows 可用性未验证。
+- `lzy-douyin-funnel` / `lzy-douyin-teardown` / `lzy-account-archive`：各自依赖在 Windows 均可安装，bash 脚本在 Git Bash 下可跑；**共同卡点是 bsk（BrowserSkill）**——抖音/小红书登录抓取目前只在 macOS 验证过，Windows 可用性未验证。
 
-> 当前版本：lzy 1.3.0 / douyin-teardown 1.0.1 / douyin-funnel 1.0.0 / script-coach 1.0.0 / video-to-text 1.0.1
+> 当前版本：lzy 1.4.0 / douyin-teardown 1.0.1 / douyin-funnel 1.0.0 / script-coach 1.0.0 / account-archive 1.0.0 / video-to-text 1.0.1
 
 ## 目录结构
 
@@ -141,6 +163,7 @@ skills/
 ├── lzy-douyin-teardown/  抖音爆款拆解（SKILL.md + scripts/ + VERSION）
 ├── lzy-douyin-funnel/    抖音搜索词漏斗（SKILL.md + scripts/ + config_* + VERSION）
 ├── lzy-script-coach/     口播文案校正（SKILL.md + VERSION，零依赖）
+├── lzy-account-archive/  账号存量归档（SKILL.md + scripts/ + VERSION；数据仓库在技能目录外）
 └── lzy-video-to-text/    视频转文字（SKILL.md + scripts/ + glossary/ + VERSION）
 ```
 
