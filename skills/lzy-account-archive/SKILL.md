@@ -29,7 +29,7 @@ lzy-account-archive · 账号存量归档
 
 数据仓库：~/WorkBuddy/lzy-data/accounts/<平台>/<账号>/（不在技能目录里，不进 GitHub）
   posts.jsonl   全部作品（含指标历史，每次抓取若指标变了会留档）
-  STATUS.md     摘要（总数/日期范围/点赞Top5/缺正文提醒）
+  STATUS.md     摘要（总数/日期范围/点赞Top5/全部作品清单——每条标题都是可点击的原帖链接）
   raw/          抓取原始产物
 ```
 

@@ -151,16 +151,36 @@ def norm_item(raw, platform):
         metrics_raw = flat if flat else (metrics_raw if isinstance(metrics_raw, dict) else {})
     metrics = norm_metrics(metrics_raw)
 
+    url = (raw.get("url") or "").strip()
+    if not url:  # 没抓到 url 时按平台规则从 id 构造（两种平台格式确定）
+        if platform == "douyin":
+            url = f"https://www.douyin.com/video/{pid}"
+        elif platform == "xiaohongshu":
+            url = f"https://www.xiaohongshu.com/explore/{pid}"
+
     item = {
         "id": pid,
         "platform": platform,
-        "url": raw.get("url") or "",
+        "url": url,
         "title": title,
         "content": content,
         "publish_date": pd,
         "metrics": metrics,
     }
     return item, problems
+
+
+def link_of(p):
+    """产出物里的可点击链接：优先用入库时存的 url，缺省按平台规则从 id 构造。"""
+    u = (p.get("url") or "").strip()
+    if u:
+        return u
+    pid = p.get("id", "")
+    if p.get("platform") == "douyin":
+        return f"https://www.douyin.com/video/{pid}"
+    if p.get("platform") == "xiaohongshu":
+        return f"https://www.xiaohongshu.com/explore/{pid}"
+    return ""
 
 
 def load_posts(path):
@@ -315,16 +335,33 @@ def cmd_report(platform, account):
         top = sorted(posts.values(),
                      key=lambda p: p.get("metrics", {}).get("likes", 0), reverse=True)[:5]
         lines += ["", "## 点赞 Top 5", "",
-                  "| 日期 | 标题 | 赞 | 评 | 转 | 藏 |", "|---|---|---|---|---|---|"]
+                  "| 日期 | 标题 | 链接 | 赞 | 评 | 转 | 藏 |",
+                  "|---|---|---|---|---|---|---|"]
         for p in top:
             m = p.get("metrics", {})
             t = (p.get("title") or "（无标题）").replace("|", "/")[:40]
-            lines.append(f"| {p.get('publish_date') or '?'} | {t} "
+            u = link_of(p)
+            ucell = f"[原帖]({u})" if u else "—"
+            lines.append(f"| {p.get('publish_date') or '?'} | {t} | {ucell} "
                          f"| {m.get('likes',0)} | {m.get('comments',0)} "
                          f"| {m.get('shares',0)} | {m.get('collects',0)} |")
         miss = [p for p in posts.values() if not p.get("content")]
         if miss:
             lines += ["", f"⚠️ 有 {len(miss)} 条缺正文全文，可跑增量抓取补齐。"]
+        # 全量清单（按发布日期倒序），每条带原帖链接——存量文档的主体
+        lines += ["", "## 全部作品（按发布日期倒序）", "",
+                  "| 发布日期 | 标题（点击看原帖） | 赞 | 评 | 转 | 藏 | 归档状态 |",
+                  "|---|---|---|---|---|---|---|"]
+        for p in sorted(posts.values(),
+                        key=lambda x: x.get("publish_date") or "0000", reverse=True):
+            m = p.get("metrics", {})
+            t = (p.get("title") or "（无标题）").replace("|", "/")[:50]
+            u = link_of(p)
+            tcell = f"[{t}]({u})" if u else t
+            ok = "✅ 全文" if p.get("content") else "⚠️ 缺全文"
+            lines.append(f"| {p.get('publish_date') or '?'} | {tcell} "
+                         f"| {m.get('likes',0)} | {m.get('comments',0)} "
+                         f"| {m.get('shares',0)} | {m.get('collects',0)} | {ok} |")
     else:
         lines.append("- 仓库还是空的，先抓一次存量。")
     lines.append("")

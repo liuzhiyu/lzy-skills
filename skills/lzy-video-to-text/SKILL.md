@@ -28,6 +28,7 @@ lzy-video-to-text · 视频转文字 · 用法
 /lzy-video-to-text <视频URL或本地路径> [选项]
   例：/lzy-video-to-text https://www.bilibili.com/video/BVxxxx --domain shortvideo
   例：/lzy-video-to-text ~/Desktop/口播.mp4 --timestamps
+  （URL/路径也可以用 --input 传，两种写法等价）
 
 常用选项：
   --domain shortvideo|health|drug|business   行业词库（行业内容必加，否则术语全是错字）
@@ -150,7 +151,7 @@ python3 scripts/watch_transcribe.py           # 转写收件箱里所有视频�
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `--input` | 是 | 视频 URL 或本地音视频文件路径 |
+| `--input`（或位置参数） | 是 | 视频 URL 或本地音视频文件路径；两种写法等价，位置参数直接跟在命令后即可 |
 | `--output` | 否 | 输出 txt 路径；不指定则归档到默认目录 |
 | `--model` | 否 | 档位：`turbo`(默认) / `large-v3` / `medium` / `small` / `base` / `tiny`，也可传完整 HF 仓库名 |
 | `--language` | 否 | 语言代码，默认 `zh`；留空自动检测 |
@@ -290,6 +291,8 @@ python3 scripts/transcribe.py --input 视频 --domain shortvideo --glossary ~/my
 
 | 症状 | 处理 |
 |------|------|
+| **新电脑首次使用没出转录稿** | 九成是环境没装。跑 `python3 scripts/setup_env.py --install`（装进技能自带 .venv）后重跑；缺环境时报错会直接给出这条命令 |
+| 转写成功但找不到稿子 | 脚本最后一行打印的就是输出 txt 的**绝对路径**；未指定 `--output/--outdir` 时落在**当时所在目录**的 `./transcripts/` 下 |
 | 报缺依赖 | `python3 scripts/setup_env.py --install` |
 | 模型下载超时 / 502 / 403 | `export HF_ENDPOINT=https://hf-mirror.com` 后重跑 |
 | pip 装包慢 | `export PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple` |

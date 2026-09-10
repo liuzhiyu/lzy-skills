@@ -36,11 +36,13 @@ import glossary as G  # noqa: E402
 
 _env.ensure_utf8_console()
 
-SETUP_CMD = f"python3 {os.path.join('scripts', 'setup_env.py')}"
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SETUP_CMD = f"python3 {os.path.join(SKILL_DIR, 'scripts', 'setup_env.py')}"
 MISSING_HINT = (
-    "转写后端未安装。请先运行：\n"
+    "转写后端未安装。请先运行（路径是绝对的，在任何目录执行都可以）：\n"
     f"    {SETUP_CMD} --install\n"
-    "它会自动把依赖装进 skill 自带的 .venv，不污染你的全局环境。"
+    "它会自动把依赖装进 skill 自带的 .venv，不污染你的全局环境。\n"
+    "首次在新电脑使用本技能，必须先跑一次这一步。"
 )
 
 
@@ -313,8 +315,10 @@ def main():
     bootstrap_if_needed()
     ap = argparse.ArgumentParser(
         description="视频/音频 -> 文本（本地 Whisper，免费离线）")
-    ap.add_argument("--input", required=True,
-                    help="视频 URL 或本地视频/音频文件路径")
+    ap.add_argument("input_pos", nargs="?", default=None, metavar="INPUT",
+                    help="位置参数形式：视频 URL 或本地文件路径（与 --input 等价，二选一）")
+    ap.add_argument("--input", default=None,
+                    help="视频 URL 或本地视频/音频文件路径（也可用位置参数直接传）")
     ap.add_argument("--output", default=None,
                     help="输出 txt 路径；不指定则归档到默认目录（见 --outdir）")
     ap.add_argument("--model", default=None,
@@ -357,6 +361,14 @@ def main():
                          "绝大多数错字，而提示词偶发标点污染与重复幻觉；"
                          "词库很小或术语纠错仍不满意时可加此开关试试")
     args = ap.parse_args()
+
+    # --input 与位置参数等价，二者缺一不可
+    if not args.input and args.input_pos:
+        args.input = args.input_pos
+    if not args.input:
+        ap.error("必须提供视频 URL 或本地文件路径：\n"
+                 "  transcribe.py <URL或路径> [选项]\n"
+                 "  transcribe.py --input <URL或路径> [选项]")
 
     # ---------------------------------------------------------------- 词库
     gloss = None
@@ -438,8 +450,9 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(out_path)) or ".", exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(content)
-    log(f"完成 -> {out_path} (字符数: {len(text)})")
-    print(out_path)
+    out_abs = os.path.abspath(out_path)
+    log(f"完成 -> {out_abs} (字符数: {len(text)})")
+    print(out_abs)
 
 
 if __name__ == "__main__":
