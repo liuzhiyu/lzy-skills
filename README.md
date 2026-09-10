@@ -8,6 +8,7 @@
 |---|---|
 | `lzy` | 工具箱主入口（路由 + help + 新增方法规范） |
 | `lzy-douyin-teardown` | 抖音爆款拆解对比：爆款 vs 非爆款对照组，18 元素 + 扩展维度，输出规律报告 |
+| `lzy-douyin-funnel` | 抖音搜索词完整漏斗：Top100 内容生态 landscape + 评论区客资识别，合并 HTML 报告 |
 | `lzy-video-to-text` | 视频转文字：URL/本地文件 → TXT，本地 Whisper，行业词库纠错，免费离线 |
 
 ## 方法详解
@@ -29,7 +30,29 @@
 
 **前提**：本机已装 BrowserSkill(bsk) 并登录抖音；首次运行会自动跑 `scripts/setup_env.py --install` 体检并装齐 ffmpeg/whisper/CLAP。
 
-### 2️⃣ lzy-video-to-text · 视频转文字（本地免费版）
+### 2️⃣ lzy-douyin-funnel · 抖音搜索词完整漏斗分析
+
+回答一个复合问题：**某个搜索词下的抖音视频，内容生态长什么样 + 评论区里到底有没有真实客户咨询、什么内容能带来咨询？**
+
+**三种模式**：
+- `--mode landscape`：只做内容生态分析（词频/分类/话题/母题/身份桶），几分钟出结果
+- `--mode comments`：只做评论区客资分析（A1 强意向 / A2 求方法 / A3 钩子留资 / A4 @AI 代写 / B 同行 / C 泛互动）
+- `--mode funnel`：完整漏斗 = 生态 + 客资 + 合并 HTML 报告（推荐交付）
+
+**它自动做的事**：bsk 抓搜索结果 Top100 → landscape 分词统计 → 逐条进视频抓评论区（3 会话并行，100 条约 13 分钟）→ jieba 分词 + 规则分类 + **钩子×案例四象限控制变量**（单变量是假相关）→ 合并漏斗报告。领域差异全部收敛到 `config_<词>.py` 一个文件，引擎脚本永不改动。
+
+**用法**：
+
+```
+/lzy-douyin-funnel <搜索词> [--mode landscape|comments|funnel]
+例：/lzy-douyin-funnel 桥本 --mode funnel
+```
+
+**产出**：`funnel_report.html`（合并漏斗）+ `landscape_report.html` + `leads.csv` / `comments_all.csv` 全套底稿。方法论沉淀了 5 个搜索词的跨赛道实测基线（留资钩子分赛道、晒真实案例是最强通用开关、@AI 截流规律）。
+
+**前提**：bsk CLI（BrowserSkill，需登录抖音）；首次运行 `python3 scripts/setup_env.py --install` 自动装 jieba（进技能自带 .venv）。
+
+### 3️⃣ lzy-video-to-text · 视频转文字（本地免费版）
 
 把视频（URL 或本地文件）转写成纯文本稿。**全程本地、免费、离线**——不依赖任何第三方付费服务（无需鲸剪/VIP），用本机 Whisper 模型转写。
 
@@ -52,7 +75,7 @@
 
 **前提**：首次使用先跑 `python3 scripts/setup_env.py --install`，依赖装进技能自带的 `.venv`，不污染全局环境。
 
-### 3️⃣ lzy · 工具箱入口（装完即用，零依赖）
+### 4️⃣ lzy · 工具箱入口（装完即用，零依赖）
 
 只做路由不做分析。`/lzy help` 看全部用法；`/lzy <方法名> [参数]` 直接调用方法；也可以直接描述需求（如贴个抖音主页链接），入口会自动路由。里面还写了「如何新增一个方法」的规范——以后新的自媒体分析方法都往这个工具箱里沉淀。
 
@@ -76,6 +99,7 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 |---|---|---|
 | `lzy` 入口 | ✅ | 无 |
 | `lzy-video-to-text` | ❌ | ffmpeg + whisper（重依赖技能，转写用；首次使用时让 AI 引导安装） |
+| `lzy-douyin-funnel` | ❌ | bsk（BrowserSkill，需登录抖音）+ Python + jieba（setup_env.py 自动装进 .venv） |
 | `lzy-douyin-teardown` | ❌ | bsk（BrowserSkill，需登录抖音）+ ffmpeg + whisper + 抽帧/音频分类环境 |
 
 装完后在 Claude Code 里输入 `/lzy help` 查看用法。
@@ -85,9 +109,9 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 已实测环境：**macOS**。其他平台理论支持情况：
 
 - `lzy-video-to-text`：**明确支持 Windows**（`setup_env.py` 内置 Windows 安装路径：`winget install Gyan.FFmpeg`、yt-dlp、faster-whisper 跨平台后端 CPU/CUDA 均可）。Linux 同理。
-- `lzy-douyin-teardown`：ffmpeg / whisper / CLAP 在 Windows 均可安装，bash 脚本在 Git Bash 下可跑；**卡点是 bsk（BrowserSkill）**——抖音登录抓取目前只在 macOS 验证过，Windows 可用性未验证。
+- `lzy-douyin-funnel` / `lzy-douyin-teardown`：各自依赖在 Windows 均可安装，bash 脚本在 Git Bash 下可跑；**共同卡点是 bsk（BrowserSkill）**——抖音登录抓取目前只在 macOS 验证过，Windows 可用性未验证。
 
-> 当前版本：lzy 1.1.1 / douyin-teardown 1.0.1 / video-to-text 1.0.1
+> 当前版本：lzy 1.2.0 / douyin-teardown 1.0.1 / douyin-funnel 1.0.0 / video-to-text 1.0.1
 
 ## 目录结构
 
@@ -95,6 +119,7 @@ git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.
 skills/
 ├── lzy/                  入口：路由表 + help + 新增方法规范 + 发布流程
 ├── lzy-douyin-teardown/  抖音爆款拆解（SKILL.md + scripts/ + VERSION）
+├── lzy-douyin-funnel/    抖音搜索词漏斗（SKILL.md + scripts/ + config_* + VERSION）
 └── lzy-video-to-text/    视频转文字（SKILL.md + scripts/ + glossary/ + VERSION）
 ```
 

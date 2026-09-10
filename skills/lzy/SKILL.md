@@ -38,6 +38,10 @@ lzy 自媒体方法论工具箱 · 用法
                     用法：/lzy douyin-teardown <抖音主页链接> [爆款N] [对照N]
                     或直接 /lzy-douyin-teardown <抖音主页链接>
 
+  douyin-funnel     抖音搜索词完整漏斗（内容生态 landscape + 评论区客资分析）
+                    用法：/lzy douyin-funnel <搜索词> [--mode landscape|comments|funnel]
+                    或直接 /lzy-douyin-funnel <搜索词>
+
   video-to-text     视频转文字（URL/本地文件 → TXT，本地 Whisper，免费离线）
                     用法：/lzy video-to-text <视频URL或本地路径> [--domain 词库]
                     或直接 /lzy-video-to-text <视频URL或本地路径>
@@ -52,6 +56,7 @@ lzy 自媒体方法论工具箱 · 用法
 | 用户意图信号 | 路由到 | 一句话说明 |
 |---|---|---|
 | 给一个抖音主页，想知道「爆款和非爆款差在哪」「这个号凭什么爆」「对标账号分析」「拆爆款」 | `/lzy-douyin-teardown` | 抖音爆款拆解对比，18 元素 + 扩展维度，爆款 vs 非爆款对照组分析，输出规律报告 |
+| 给一个搜索词，想知道「XX 这个词抖音上什么内容能带客资」「分析 XX 的评论区」「有没有客户咨询」「做完整漏斗」 | `/lzy-douyin-funnel` | 抖音搜索词完整漏斗：Top100 内容生态 landscape + 逐条评论区客资识别（A1-A4/B/C + 四象限控制变量），合并 HTML 报告 |
 | 给视频链接或本地视频文件，要「转写」「提取口播文案」「视频转文字」「变成 txt」 | `/lzy-video-to-text` | 视频转文字，本地 Whisper 免费离线，带行业词库纠错，输出 txt |
 
 *(后续新增方法后，在此表追加一行)*
@@ -79,7 +84,7 @@ lzy 自媒体方法论工具箱 · 用法
 
 ---
 
-## 发布与迭代（GitHub：liuzhiyu/lzy-skills，私有仓库）
+## 发布与迭代（GitHub：liuzhiyu/lzy-skills，公开仓库）
 
 本地源文件在 `~/.claude/skills/lzy*`（**源**），GitHub 仓库是发布副本（**分发 + 版本锚点**）。
 本地文件镜像在 `~/WorkBuddy/lzy-skills/`（validate.sh / install.sh / publish.sh 都在这里）。
@@ -96,4 +101,4 @@ lzy 自媒体方法论工具箱 · 用法
 
 认证：GitHub token 存于 `~/.workbuddy/.lzy-github-token`（权限 repo+read:org，勿外泄、勿提交进仓库）。过期或失效时重新走设备码授权。
 
-用户在任何机器上安装/更新这套技能：`git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.sh`（私有仓库需 GitHub 登录）。
+用户在任何机器上安装/更新这套技能：`git clone https://github.com/liuzhiyu/lzy-skills.git && bash lzy-skills/install.sh`（仓库公开，无需登录；也可直接对 AI 说「帮我安装这个 skill：https://github.com/liuzhiyu/lzy-skills」）。
