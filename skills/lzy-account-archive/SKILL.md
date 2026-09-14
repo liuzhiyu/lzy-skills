@@ -85,8 +85,37 @@ bash scripts/grab_douyin_detail.sh <video_id> <仓库>/raw/items/<video_id>.json
 bash scripts/grab_xhs.sh note <note_id> <仓库>/raw/items/<note_id>.json
 ```
 
-- 逐条循环跑（可让 AI 分批并行会话，参考 lzy-douyin-teardown 的 3 会话并行）。
+- 逐条循环跑（可让 AI 分批并行会话，参考 lzy-douyin-teardown 的 3 会话并行；实测 3 批次并行各 4 条，12 条 56 秒抓完）。
+- 抖音详情**从渲染后的 DOM 提取**（`data-e2e` 锚点 + `document.title`），不再读 RENDER_DATA——见「踩坑」2026-09-14 条。除标准四指标外还会记 `publish_time`（含时分）与 `duration_ms`（作品时长，毫秒，与常见导出 CSV 同单位），供导出对齐全字段表用（archive.py merge 只收标准字段，这两个存在 raw/items 里）。
 - **校准协议**：每个账号（或 DOM 改版后）先抓 1 条验证字段完整——content 是全文、publish_date 正确、四个指标非全 0。校准通过再批量；不通过先修提取 JS（见「踩坑」），把修好的 JS 记回本文件。
+
+### 第 4.5 步 · 口播全文（可选，做文本分析时必做）
+
+⚠️ **抖音有两种「文本」，别搞混**：
+
+| 口径 | 来源 | 典型长度 | 用途 |
+|---|---|---|---|
+| **正文 / caption** | 详情页 DOM（第 4 步抓到的 content） | 50~150 字 | 只是视频简介 + 话题标签 |
+| **口播全文** | 下载视频 → Whisper 转写 | 800~1600 字（约 5~6 字/秒） | 对标拆解、选题分析、脚本规律——**真正要的是这个** |
+
+如果目标是「对标账号文本分析」，caption 远远不够（差 10 倍以上）。补口播全文：
+
+```bash
+# 1) 拿播放流直链（每条约 5~15s）
+bsk navigate "https://www.douyin.com/video/<id>" --session <SID> ...
+bsk evaluate --session <SID> "document.querySelector('video')?.currentSrc"   # 拿直链
+# 2) curl 带 UA + Referer 下载 mp4
+# 3) 本地转写（复用 lzy-video-to-text，不要另造轮子）
+$HOME/.workbuddy/skills/video-to-text/.venv/bin/python \
+  $HOME/.workbuddy/skills/video-to-text/scripts/transcribe.py \
+  --input v_<id>.mp4 --output script_<id>.txt --language zh \
+  --domain creator,business --glossary <赛道自定义词库>
+```
+
+- **必须带赛道自定义词库**（`--glossary`），否则账号名/人名全错。实测该账号不建词库时「艺丰」会被转成 易峰/一封/易风（老数据里就是这么错的）；建了词库后同音错写 0 残留。
+- 转写稿直接作为 `content` 入库（`publish_time` / `duration_ms` / `caption` 一并留在 raw/items）。
+- 耗时参考：turbo 模型，单条 150s 视频 ≈ 30 秒（下载 + 转写），2 批次并行 12 条 ≈ 2.5 分钟。
+- **口径要统一**：如果老数据用的是口播稿，新数据也必须补口播稿，否则两批数据不可比。
 
 ### 第 5 步 · 入库
 
@@ -105,6 +134,10 @@ python3 scripts/archive.py report douyin <账号slug>
 
 向用户报告：本次新增 N 条（日期范围）、跳过当天 M 条、总量 T 条、缺正文的条数（有缺口要主动说，不装完整）。
 
+**导出成表格给用户**：STATUS.md 是索引，用户真正要的是**能直接接上他原有表格的 CSV**。列名、列序、编码必须和用户手上那份**逐列对齐**，否则他没法合并。本账号既有格式：`作品标题,作品链接,发布时间,获赞,评论,分享,收藏,作品时长,内容文案`，GBK 编码，`发布时间` 精确到分钟，`作品时长` 毫秒，`内容文案` 是口播全文。
+
+**老数据的缺口要顺手补**：第一次归档时若发现历史条目缺正文/缺指标，用同一套转写流程补齐再入库（同一个仓库两批数据口径不一致，比缺几条更糟）。补完要在汇报里说明补了几条。
+
 ## 硬规则
 
 1. **增量优先**：抓列表后必须先过 `pending`，已归档的绝不重抓详情。
@@ -121,7 +154,21 @@ python3 scripts/archive.py report douyin <账号slug>
 ## 踩坑记录（当天回写）
 
 - 2026-09-10 v1.0.0 建档。抖音列表抓取复用 lzy-douyin-teardown 已验证逻辑（滚动容器动态查找 + 懒加载收敛）；详情页优先读 `RENDER_DATA`（SSR 数据，比 DOM 稳），DOM 结构变了它大概率还能用。
-- 待实测：小红书未登录验证墙频率、抖音 RENDER_DATA 在视频详情页的字段路径、粉丝极多账号的列表收敛轮数。首次真实抓取后回来补记录。
+- **2026-09-14 ⚠️ 旧详情提取方案已失效（已改）**：抖音视频详情页的 `RENDER_DATA` 现在**只剩壳数据**（`app.user` / `app.odin` / abTest 等），**不含 aweme detail**，按 `desc + create_time/statistics` 深搜必然 0 命中——12 条样本 100% "SSR 未命中"。已重写 `grab_douyin_detail.sh` 改为 DOM 提取，实测 12/12 成功。可用的 DOM 锚点（2026-09-14 实测）：
+
+  | 字段 | 选择器 |
+  |---|---|
+  | 文案全文 | `[data-e2e="detail-video-info"]` 第一个子元素的 innerText（去掉开头「展开/收起」）；更稳的备选是 `document.title` 去掉尾部 ` - 抖音`（取两者较长的） |
+  | 发布时间 | `[data-e2e="detail-video-publish-time"]` → 文本形如 `发布时间：2026-09-10 16:49` |
+  | 点赞 | `[data-e2e="video-player-digg"]` |
+  | 评论 | `[data-e2e="feed-comment-icon"]` |
+  | 收藏 | `[data-e2e="video-player-collect"]` |
+  | 分享 | `[data-e2e="video-player-share"]` |
+  | 作品时长 | `document.querySelector('video').duration`（**秒**，×1000 = 毫秒，与导出 CSV 的「作品时长」同单位） |
+
+  指标取到的是展示文本（可能是 `1.1万`），交给 archive.py 的 `norm_metrics` 归一化，别在脚本里强行 int。
+- 2026-09-14 附带确认：`bsk session` 并行安全——3 个批次各 4 条同时跑，12 条 56 秒抓完，无互抢。列表抓取一轮 23 秒收敛（122 条）。
+- 待实测：小红书未登录验证墙频率、粉丝极多账号的列表收敛轮数（本轮 122 条收敛于第 5 轮，属正常）。
 
 ## 迭代纪律
 

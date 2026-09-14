@@ -4,6 +4,15 @@
 > **发布流程要求**：每次发布前在本文件顶部加一节（日期 + 主版本号 + 条目），再跑 publish.sh。
 > 版本号说明：**自 2.0.0 起全工具箱共用一个主版本号**（存于 `skills/lzy/VERSION`），子技能不再有独立版本。
 
+## 2.0.1 🚀（2026-09-14）
+
+- 修复 lzy-account-archive：抖音详情页提取全面失效——RENDER_DATA 现在只剩壳数据（app.user 等），不含 aweme detail，旧深搜必然 0 命中（12/12 失败）
+- 优化 lzy-account-archive：`grab_douyin_detail.sh` 改为 DOM 提取（`data-e2e` 锚点 + `document.title` 兜底），实测 12/12 成功
+- 新增 lzy-account-archive：详情抓取额外记 `publish_time`（时分）与 `duration_ms`（作品时长毫秒），对齐常见的全字段导出 CSV
+- 新增 lzy-account-archive「第 4.5 步 · 口播全文」：抖音 DOM 抓到的是正文/caption（50~150 字），做文本分析要的是口播稿（800~1600 字）——补下载视频 + lzy-video-to-text 本地 Whisper 转写，必须带赛道自定义词库（不建词库时账号名会被转成同音错字）
+- 新增 lzy-account-archive 两个硬要求：导出 CSV 必须与用户既有表格逐列对齐；老数据缺口（缺正文）要顺手补齐再入库，避免同一仓库两批口径不一致
+- 优化 lzy-account-archive：SKILL.md 踩坑记录补全可用的 DOM 锚点表（各字段选择器）+ 确认 bsk 3 会话并行安全 / 转写速度基线（单条 150s 视频 ≈ 30 秒）
+
 ## 2.0.0 🚀（2026-09-10）
 
 - 新增单一主版本号机制：只有 `skills/lzy/VERSION` 一个版本号，全部子技能共用；子技能目录不再有各自 VERSION
