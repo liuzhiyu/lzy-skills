@@ -4,6 +4,11 @@
 # 前提：~/.workbuddy/.lzy-github-token 存在且有效（repo 权限）
 set -euo pipefail
 
+# 本机环境代理（HTTP_PROXY=127.0.0.1:58950）不支持 git smart HTTP：
+# clone/push 会报 "Error in the HTTP2 framing layer" 或 "Empty reply from server"，
+# 而 github.com 直连可达（curl --noproxy 200）。故所有 git 操作绕开代理。
+unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy ALL_PROXY all_proxy 2>/dev/null || true
+
 SRC="$HOME/.claude/skills"
 TOKEN_FILE="$HOME/.workbuddy/.lzy-github-token"
 REPO="liuzhiyu/lzy-skills"
