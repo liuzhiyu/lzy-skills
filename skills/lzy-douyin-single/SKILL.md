@@ -57,6 +57,7 @@ Step 3 文本指标   →  python3 scripts/analyze_script.py --transcript script
 Step 4 目视      →  主 Agent 逐帧 Read frames_*/a_01.jpg + 中段帧，看场景/字幕/POV
 Step 5 出报告    →  python3 scripts/build_report.py --workdir <目录>  → 主 Agent 填八维归因
 Step 6 云文档    →  --doc 时：把报告写成腾讯在线文档，给分享链接
+Step 6.5 放视频  →  mp4 转 GIF → upload_image → smartcanvas.edit 插到顶部（详见 Step 6.5）
 ```
 
 ### Step 1 · 抓取（一次 bsk session 干完所有事）
@@ -184,6 +185,38 @@ python3 scripts/build_report.py --workdir ./拆解_<id>
 > 去掉代理又报 DNS 失败。**解法：用 curl 直接 POST（curl 直连和走代理都能通），票据从本地网关取。**
 > 纯 Claude Code 环境没有腾讯文档能力时跳过本步，把本地 md 路径给用户。
 
+### Step 6.5 · 把视频塞进文档（默认要做）
+
+**腾讯文档不能上传 mp4**——工具表里只有 `upload_image`，没有 upload_video；`doc.insert_attachment` 是 DOC 品类专用，smartcanvas 用不了。
+要让读者在文档里直接看到画面，唯一可行解是**转成 GIF 动图内嵌**：
+
+```bash
+# 1) 转 GIF：控制在 10MB 以内（upload_image 硬上限），实测参数 13.7s/576x1024 → 4.7MB
+ffmpeg -y -i v_<id>.mp4 \
+  -filter_complex "fps=8,scale=432:-1:flags=lanczos,split[a][b];\
+[a]palettegen=max_colors=48:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4" \
+  -loop 0 preview_<id>.gif
+
+# 2) 上传拿 image_id
+#    tools/call  upload_image  { image_base64: <base64>, file_name: "preview.gif" }
+#    注意：传实际 base64 内容，不要传路径；4.7MB 的 gif → 6.3MB base64，POST 超时给到 180s
+
+# 3) 插到顶部：先 smartcanvas.find 定位顶块 id，再 INSERT_BEFORE
+#    tools/call  smartcanvas.edit  { file_id, action: "INSERT_BEFORE", id: <顶块id>,
+#                                    content: "<Image src='<image_id>' alt='原片动图预览 13.7秒' />" }
+```
+
+四个实测结论，别踩：
+
+| 坑 | 结论 |
+|---|---|
+| `![](image_id)` markdown 语法 | ❌ **不生效**，字数不变，静默失败。必须用 MDX `<Image src='...' />` |
+| image_id 只有一天有效期 | 别管它。插入后服务端**转存成永久地址** `docimg*.docs.qq.com/image/xxx.gif`，用 `smartcanvas.read` 能看到真实 URL |
+| GIF 超 10MB | 第一版 576 宽 + 10fps + 64 色 = 10.3MB 超限；降到 432 宽 + 8fps + 48 色 = 4.7MB 通过 |
+| GIF 无声 | 图片后面插一段说明，给抖音原链接，读者想看有声版能点过去 |
+
+插完用 `smartcanvas.read` 确认出现 `<Image src="https://docimg..." />` 块，再用 `get_content` 确认表格行数没变（防止误伤正文）。
+
 ## 脚本清单
 
 | 脚本 | 作用 |
@@ -211,6 +244,8 @@ python3 scripts/build_report.py --workdir ./拆解_<id>
 | 「主任医师」被计成命中 | 是「副主任医师」的子串，计数会虚高 1，人工复核时扣掉 |
 | 腾讯文档 MCP 报 502 或 DNS 失败 | 用 curl 直连 `docs.qq.com/openapi/mcp`，票据从本地网关 `/internal/tencent-docs/tokens` 取 |
 | 以为腾讯文档要按块写才不丢表格 | 错。smartcanvas + `content_format=markdown` 整段写入，实测零丢失 |
+| 想把 mp4 传进文档 | 传不了，腾讯文档没有 upload_video。**转 GIF**（≤10MB）再 `upload_image` 内嵌，见 Step 6.5 |
+| `![](image_id)` 插入后没反应 | 静默失败。编辑接口只认 **MDX `<Image src='...' />`**，markdown 图片语法不生效 |
 
 ## 报告规范
 
