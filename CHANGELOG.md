@@ -4,6 +4,16 @@
 > **发布流程要求**：每次发布前在本文件顶部加一节（日期 + 主版本号 + 条目），再跑 publish.sh。
 > 版本号说明：**自 2.0.0 起全工具箱共用一个主版本号**（存于 `skills/lzy/VERSION`），子技能不再有独立版本。
 
+## 2.1.1 🚀（2026-09-29）
+
+- 修复 lzy-douyin-single：分享链 `/friend?modal_id=<id>` 解析不出 video_id——同时匹配 `/video/(\d+)` 与 `modal_id=(\d+)`，统一转 `/video/<id>` 打开
+- 修复 lzy-douyin-single：视频流直链 navigate 后 7s 仍为空导致下载必失败——改为每 2s 轮询、最多 24s，实测 8-10s 才出现
+- 新增 lzy-douyin-single「Step 2.5 无口播视频」：转写稿只有几十字且像歌词 = 这条根本没人说话，文本在屏幕字幕上；必须逐帧目视拼成 captions 文件再喂分析，并在报告里声明（实战案例：13.7 秒医生 IP 视频，BGM《孤勇者》）
+- 新增 lzy-douyin-single：信号词典补字幕型内容词——人群点名（老乡/家人们）、权威头衔（副主任医师/医学博士）、CTA（找我/尽管找）、痛点（冤枉路/冤枉钱）
+- 修正 lzy-douyin-single 云文档步骤：原「腾讯文档不兼容 md、必须按块写」是错的——smartcanvas + `content_format=markdown` 整段写入实测零丢失（5503 字 / 27 行表格全保留）
+- 新增 lzy-douyin-single：腾讯文档 MCP 在本机代理环境下 502 / DNS 双失败的绕过法——curl 直连 + 从本地网关取票据
+- 优化 lzy-douyin-single：转写可复用本机已有 Whisper 环境，不必重装（首次装 mlx-whisper 要 20+ 分钟）
+
 ## 2.1.0 🚀（2026-09-29）
 
 - 新增 lzy-douyin-single 子技能：抖音**单条**视频爆款归因——给一条视频链接，一次 bsk session 内抓页面指标 + 文案 + 前排评论 + 下载 mp4 + 抽帧，接本地 Whisper 转写，出八维归因报告
