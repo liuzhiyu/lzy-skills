@@ -4,6 +4,13 @@
 > **发布流程要求**：每次发布前在本文件顶部加一节（日期 + 主版本号 + 条目），再跑 publish.sh。
 > 版本号说明：**自 2.0.0 起全工具箱共用一个主版本号**（存于 `skills/lzy/VERSION`），子技能不再有独立版本。
 
+## 2.1.2 🚀（2026-09-29）
+
+- 新增 lzy-douyin-single「Step 6.5 把视频塞进文档」：腾讯文档没有 upload_video、mp4 传不进去——实测唯一可行解是 ffmpeg 转 GIF（≤10MB）→ upload_image 拿 image_id → smartcanvas.edit 插到文档顶部，动图直接在文档里播放
+- 新增 lzy-douyin-single：GIF 压缩参数基线——576宽/10fps/64色 = 10.3MB 超限，432宽/8fps/48色 = 4.7MB 通过（13.7s 竖屏视频）
+- 修复 lzy-douyin-single：smartcanvas.edit 用 markdown 图片语法 `![](image_id)` **静默失败**（字数不变、无报错）——必须用 MDX `<Image src='...' />` 才生效
+- 新增 lzy-douyin-single：image_id 标称「一天有效」不用担心，插入后服务端转存为永久地址 `docimg*.docs.qq.com/image/xxx.gif`，可用 smartcanvas.read 验证
+
 ## 2.1.1 🚀（2026-09-29）
 
 - 修复 lzy-douyin-single：分享链 `/friend?modal_id=<id>` 解析不出 video_id——同时匹配 `/video/(\d+)` 与 `modal_id=(\d+)`，统一转 `/video/<id>` 打开
