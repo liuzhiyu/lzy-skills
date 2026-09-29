@@ -95,6 +95,22 @@ python3 "$HOME/.claude/skills/lzy-video-to-text/scripts/transcribe.py" \
 - `--domain` 必加：短视频/获客 → `shortvideo`；健康营养 → `health`；临床用药 → `health,drug`；商业 ToB → `business`。
 - `--timestamps` 必加：钩子窗口和结构分段都要靠时间戳切。
 - 没装 lzy-video-to-text 时，先跑它的 `scripts/setup_env.py --install`（首次装 mlx-whisper 要 20+ 分钟）。
+  本机若已有别的 Whisper 环境（如 WorkBuddy 的 `~/.workbuddy/skills/video-to-text/.venv`），
+  直接用它的 python 解释器跑 `transcribe.py` 即可，不必重装。
+
+### Step 2.5 · 无口播视频：先判有没有人说话（2026-09-29 实战新增）
+
+**转写稿极短（几十字）时，八成不是转写失败，是这条根本没人说话。**
+
+判据：转写出的句子押韵/像歌词、字数远小于时长应有的量。这时**文本在屏幕字幕上**，处理办法：
+
+1. 逐帧 Read 帧图，把字幕**手工拼成全文**，存成 `captions_<ID>.txt`（带 `[mm:ss]`，时间轴按帧序推算，注明 ±0.5s）。
+2. `analyze_script.py` 的文本分析**改喂 captions 文件**，不要喂转写稿（喂了就是在分析 BGM 歌词）。
+3. 报告里必须写明「本条无口播，转写为 BGM 歌词，文本分析基于目视字幕」。
+4. BGM 歌词本身可能是有效证据——见第八维「制作层」：歌词与叙事同构时，是加分项。
+
+> 实战案例：`7674561376723012905`（陈松文）全片 13.7 秒无口播，字幕打字机式呈现，BGM《孤勇者》。
+> 这类「字幕型」内容在医生 IP 里不少，别按口播型套框架。
 
 ### Step 3 · 文本层指标
 
@@ -149,15 +165,24 @@ python3 scripts/build_report.py --workdir ./拆解_<id>
 
 ### Step 6 · 云文档（`--doc`）
 
-报告出完后，把 Markdown 落成**腾讯在线文档**并给可协作链接：
+一次调用搞定，**不用按块写**（v0.1 写的「按块写」是错的，已实测更正）：
 
-1. 用腾讯文档能力新建一篇文档，标题格式：`单条拆解 · <作者昵称> · <发布日期>`。
-2. **按块写，不要整段塞 Markdown** —— 腾讯文档对 md 的兼容不完整，整段粘贴会丢表格。做法：标题/正文用块插入，表格用表格块重建，代码块内容用正文块。
-3. 报告顶部的元信息区（来源、抓取时刻、发布、时长、口径）放在文档最前面，**抓取时刻必须保留**。
-4. 权限设成「拿到链接可查看/可评论」，把链接给用户。
-5. 本地 md 原文件保留，不删。
+```bash
+# 1) 取票据（本地网关，不走代理）
+#    GET $connector-proxy/url + /internal/tencent-docs/tokens  → personal.token
+# 2) POST https://docs.qq.com/openapi/mcp
+#    method=tools/call, name=create_smartcanvas_by_mdx
+#    arguments: { title(≤36字), mdx: <报告全文>, content_format: "markdown" }
+```
 
-> 当前环境没有腾讯文档能力时（比如纯 Claude Code 环境），跳过本步，把本地 md 路径给用户，并说明「腾讯文档需要 AI 环境具备腾讯文档能力；没有的话手动粘贴即可」。
+- 走**智能文档（smartcanvas）**品类，不是 doc。`content_format=markdown` 必须显式传，默认按 MDX。
+- 实测：本地 md 5503 字、27 行表格整段塞进去，**标题/表格/引用全部正常渲染，零丢失**。
+- 返回 `url` 给用户时拼上 `?_fid=<file_id>`。
+- 用 `get_content` 回读验证一次（检查字数、表格行数、抓取时刻是否都在）。
+
+> 网络坑：腾讯文档 MCP 在本机有代理环境下，python 版 `tencentdocs.py` 可能报 `502 Bad Gateway`，
+> 去掉代理又报 DNS 失败。**解法：用 curl 直接 POST（curl 直连和走代理都能通），票据从本地网关取。**
+> 纯 Claude Code 环境没有腾讯文档能力时跳过本步，把本地 md 路径给用户。
 
 ## 脚本清单
 
@@ -179,7 +204,13 @@ python3 scripts/build_report.py --workdir ./拆解_<id>
 | 没登录抖音 | currentSrc 与指标都拿不到 → 提示用户先在浏览器登录再跑 |
 | 转写稿 `#` 元信息头进 md 变成一级标题 | build_report 会过滤 `#` 开头的行 |
 | 行业术语全是错字 | 转写必加 `--domain`；词库没有的往 glossary 加一行 |
-| 腾讯文档丢表格 | 按块写，表格单独用表格块重建，别整段粘 md |
+| 分享链是 `/friend?modal_id=<id>` 不是 `/video/<id>` | 从 URL 里同时匹配 `/video/(\d+)` 和 `modal_id=(\d+)`，统一转成 `/video/<id>` 打开 |
+| navigate 后 7s 取不到 currentSrc，视频下载失败 | **改成轮询**（每 2s 一次，最多 24s）；实测 8-10s 才出现。拿到立刻下载 |
+| 转写只有几十字、像歌词 | 这条**没有口播**，文本在屏幕字幕上 → 走 Step 2.5，逐帧目视拼字幕再分析 |
+| 信号词典对字幕型内容命中率低 | 已补：人群点名（老乡/家人们）、权威头衔（副主任医师/医学博士）、CTA（找我/尽管找）、痛点（冤枉路/冤枉钱） |
+| 「主任医师」被计成命中 | 是「副主任医师」的子串，计数会虚高 1，人工复核时扣掉 |
+| 腾讯文档 MCP 报 502 或 DNS 失败 | 用 curl 直连 `docs.qq.com/openapi/mcp`，票据从本地网关 `/internal/tencent-docs/tokens` 取 |
+| 以为腾讯文档要按块写才不丢表格 | 错。smartcanvas + `content_format=markdown` 整段写入，实测零丢失 |
 
 ## 报告规范
 
@@ -194,5 +225,8 @@ python3 scripts/build_report.py --workdir ./拆解_<id>
 
 ### 状态
 
-- v0.1（2026-09-29）首版。脚本语法与报告管线已用构造数据跑通，**尚未用真实抖音链接端到端验证**。
-  第一条真实链接跑完后，把新踩到的坑回写进「踩坑记录」，并删掉本状态段。
+- **v0.2（2026-09-29）已用真实链接端到端验证**：`7674561376723012905`（陈松文 / 上海市第一人民医院心内科，
+  13.7 秒无口播的字幕型视频，1.1万赞 / 1138 评 / 2141 藏）。全链路跑通：抓取 → 下载 → 抽帧 → 转写 →
+  文本指标 → 八维归因 → 腾讯文档。首版踩的坑已全部回写进上表。
+- v0.1 → v0.2 的修正：补 modal_id 链接兼容、视频流改轮询、新增 Step 2.5 无口播处理、信号词典补字幕型词、
+  云文档改一次写入（原「按块写」是错的）。
