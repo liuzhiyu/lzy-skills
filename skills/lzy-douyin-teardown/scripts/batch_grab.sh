@@ -83,7 +83,7 @@ for ID in "$@"; do
 
   local_success=0
   for attempt in 1 2 3; do
-    SID=$(bsk session start 2>&1 | tail -1 | grep -oE '[A-Za-z0-9]{4}' | tail -1)
+    SID=$(bsk session start --no-focus 2>&1 | tail -1 | grep -oE '[A-Za-z0-9]{4}' | tail -1)
     if [ -z "$SID" ]; then
       echo "[$ID] session 创建失败"
       sleep 2
