@@ -94,7 +94,7 @@ JSON.stringify((()=>{
     comment:q('feed-comment-icon'),
     collect:q('video-player-collect'),
     share:q('video-player-share'),
-    author: t1('[data-e2e="user-info"]') || t1('[data-e2e="video-player-nickname"]') || '',
+    author: t1('[data-e2e="video-player-nickname"]') || ((t1('[data-e2e="user-info"]')||'').split('\n')[0]||'').trim().slice(0,20) || '',
     role: q('badge-role-name'),
     dur:(v&&isFinite(v.duration)&&v.duration>0)?v.duration:null,
     comments:comments
