@@ -50,6 +50,11 @@ TYPE_SIGNALS = """判类型的信号（目视 + 转写后综合判断，拿不�
 - 不讲知识、讲态度/生活/出诊日常 → **人设类**"""
 
 
+# 互动结构比率经验线（经验假设，只作线索不作结论）
+RATIO_LINE = {"comment_per_like": 0.08, "collect_per_like": 0.15, "share_per_like": 0.05}
+RATIO_ZH = {"comment_per_like": "评赞比", "collect_per_like": "藏赞比", "share_per_like": "转赞比"}
+
+
 def fmt(n):
     return "—" if n is None else f"{n:,}"
 
@@ -101,13 +106,41 @@ def main():
 
     L.append("## 一、数据快照")
     L.append("")
-    L.append("| 指标 | 数值 |")
-    L.append("|---|---|")
+    L.append("| 指标 | 数值 | 偏离 |")
+    L.append("|---|---|---|")
     raw = data.get("metrics_raw", {}) or {}
-    for zh, k in [("点赞", "likes"), ("评论", "comments"), ("收藏", "collects"), ("转发", "shares")]:
-        L.append(f"| {zh} | {raw.get(k) or fmt(mt.get(k))} |")
+    likes = mt.get("likes") or 0
+    rows = [("点赞", "likes", None),
+            ("评论", "comments", "comment_per_like"),
+            ("收藏", "collects", "collect_per_like"),
+            ("转发", "shares", "share_per_like")]
+    for zh, k, dk in rows:
+        ratio = (mt.get(k) / likes) if (dk and likes) else None
+        if ratio is None:
+            note = "基准"
+            if zh == "点赞":
+                note = "基准" + ("（页面只到万级，为估算值）"
+                                 if "万" in str(raw.get(k) or "") else "")
+        else:
+            line = RATIO_LINE[dk]
+            pct = f"{ratio * 100:.1f}%"
+            if ratio >= line * 1.3:
+                flag, word = "🔴", "很高"
+            elif ratio >= line:
+                flag, word = "🔴", "偏高"
+            elif ratio >= line * 0.6:
+                flag, word = "", "正常"
+            else:
+                flag, word = "", "偏低"
+            note = f"{RATIO_ZH[dk]} **{pct}** {flag} {word}（经验线 {line * 100:.0f}%）"
+        L.append(f"| {zh} | {raw.get(k) or fmt(mt.get(k))} | {note} |")
     L.append("")
-    L.append("> 抖音数字是活的，引用必须带上方的抓取时刻。")
+    L.append("> 抖音数字是活的，引用必须带上方的抓取时刻。"
+             "比率只标偏离，正常项不展开。")
+    L.append("")
+    L.append("**互动结构**（一句话：上面几个比率合起来说明这条的观众在干什么）：")
+    L.append("（待补：高藏+高评+低转 → 观众当「人脉」存起来、在评论区认亲，但不转给外人。"
+             "结合内容改成自己的话，一行，不要展开）")
     L.append("")
 
     L.append("## 二、视频自带文案（标题 + 正文 + 话题）")
