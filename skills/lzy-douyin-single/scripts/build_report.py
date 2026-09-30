@@ -1,53 +1,64 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""把 data.json + text_metrics.json + 转写稿 拼成单条视频拆解报告骨架（Markdown）。
+"""把 data.json + 转写稿 拼成单条视频拆解报告骨架（Markdown）。
 
 用法:
-  python3 build_report.py --workdir <工作目录> [--transcript script.txt] [--out 报告.md]
+  python3 build_report.py --workdir <工作目录> [--transcript script.txt] [--type 口播类] [--out 报告.md]
 
-产物：报告 md，含「已测数据」全部自动填充，「归因判断」留占位由主 Agent 逐帧+读稿后填写。
+产物：三章精简报告骨架（数据快照 / 自带文案 / 全文+逐句标注）。
+关键：**先判类型，再选分析主线**——门诊类走故事线，口播类走文案线，不同类型标注词表不同。
+
 理由：数据和计数可以程序化，归因是判断——判断不外包（lzy 工具箱设计原则）。
+      v2.2 起：程序化指标（text_metrics.json）**不再进报告**，只作判类型与写标注时的后台参考
+      （用户 2026-09-30 拍板：指标堆砌是废话，报告只留素材 + 文案 + 逐句亮点）。
 """
 import argparse
 import json
 import os
 import sys
 
-DIMENSIONS = [
-    ("选题与人群", "这条在替谁说话？痛点强度够不够？是大众母题还是窄众黑话？", "🟡"),
-    ("钩子（前 3 秒）", "开场塞了几个信号？是反常识、身份点名、还是结果承诺？为什么能拦住人？", "🔴"),
-    ("结构节奏", "四段字数分布说明了什么？信息密度压在哪一段？有没有废段？", "🔴"),
-    ("表达与语感", "口语还是书面？短句比例、语速、有没有口语连接词撑住「人味」？", "🔴"),
-    ("信任与身份", "凭什么信他？身份标签、案例、信任反转、免责话术怎么配比？", "🟡"),
-    ("互动设计", "评论区是怎么被设计出来的？预判滑走、提问、三连击？", "🟡"),
-    ("CTA / 留资", "有没有钩子把人带走？带走的路径是几步？", "🔴"),
-    ("制作层", "场景 / POV / 字幕 / BGM / 剪辑节奏（逐帧目视后填）", "🟡"),
-]
+# 类型 → 分析主线 + 标注词表
+TYPE_GUIDE = {
+    "口播类": {
+        "主线": "文案驱动。逐句看「这句话在干什么」：怎么点名、怎么立人设、怎么戳痛点、怎么收口。",
+        "词表": ["圈人群", "认亲/降维", "人设专业背书", "情感钩", "戳痛点",
+                 "给承诺·希望种草", "二次点名·划定范围", "CTA·人设定型", "留人/防划走"],
+        "提示": "本类也cover「无口播的字幕型」——文本在屏幕上时，按字幕逐句标。",
+    },
+    "门诊类": {
+        "主线": "故事驱动。看人物、冲突、转折、结局：谁来了、他卡在哪、医生做了什么、结果怎样、留了什么尾巴。",
+        "词表": ["人物出场", "处境/冲突", "误判或踩坑", "医生的判断动作", "转折",
+                 "结局与结果", "留白/追问", "信任落点", "给患者/观众的行动指引"],
+        "提示": "门诊类的钩子往往在「这个病人有多典型」，不在文案本身——别套口播类那套词表。",
+    },
+    "科普类": {
+        "主线": "结构驱动。看信息怎么组织：用什么问题钩住、先破哪个误区、怎么讲原理、给不给方案。",
+        "词表": ["钩子问题", "误区破除", "原理拆解", "案例佐证", "方案/清单", "收口与复述"],
+        "提示": "科普类最容易做成说明书——标注时重点看它有没有「先破后立」和对观众说的话。",
+    },
+    "人设类": {
+        "主线": "身份驱动。看它怎么立人：亮什么身份、表什么态、用什么处境换共鸣。",
+        "词表": ["身份标签", "价值观表态", "处境共鸣", "反差/反转", "自我暴露", "行动号召"],
+        "提示": "人设类没有知识点，别去找「讲了个什么道理」，去看他把自己摆在了什么位置。",
+    },
+}
+
+TYPE_SIGNALS = """判类型的信号（目视 + 转写后综合判断，拿不准就选最接近的）：
+- 转写 < 50 字、内容像歌词 → **无口播字幕型**，按口播类走
+- 画面出现第二个真人 + 诊室/病房/白大褂 + 有对话 → **门诊类**
+- 医生独自讲、术语密度高、有板书或图 → **科普类**
+- 不讲知识、讲态度/生活/出诊日常 → **人设类**"""
 
 
 def fmt(n):
     return "—" if n is None else f"{n:,}"
 
 
-def ratio_line(der, mt):
-    rows = []
-    mapping = [("评赞比", "comment_per_like", 0.08, "高评=争议型/提问型，评论本身是内容"),
-               ("藏赞比", "collect_per_like", 0.15, "高藏=工具型，观众觉得「以后用得上」"),
-               ("转赞比", "share_per_like", 0.05, "高转=社交货币型，观众愿意替你背书")]
-    for label, key, thr, mean in mapping:
-        v = der.get(key)
-        if v is None:
-            rows.append(f"| {label} | — | — |")
-        else:
-            flag = "偏高" if v >= thr else "偏低"
-            rows.append(f"| {label} | {v} | {flag}（阈值 {thr}）→ {mean} |")
-    return "\n".join(rows)
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--workdir", required=True)
     ap.add_argument("--transcript", help="转写 txt 路径，默认工作目录下 script_*.txt")
+    ap.add_argument("--type", default="", help="视频类型：口播类/门诊类/科普类/人设类")
     ap.add_argument("--out", help="输出 md 路径")
     args = ap.parse_args()
 
@@ -56,52 +67,47 @@ def main():
     dp = os.path.join(wd, "data.json")
     if os.path.exists(dp):
         data = json.load(open(dp, encoding="utf-8"))
-    tm = {}
-    tp = os.path.join(wd, "text_metrics.json")
-    if os.path.exists(tp):
-        tm = json.load(open(tp, encoding="utf-8"))
 
     transcript = args.transcript
     if not transcript:
-        cands = [f for f in os.listdir(wd) if f.startswith("script_") and f.endswith(".txt")]
+        cands = [f for f in os.listdir(wd)
+                 if (f.startswith("script_") or f.startswith("captions_")) and f.endswith(".txt")]
         transcript = os.path.join(wd, sorted(cands)[-1]) if cands else None
+    tbody = ""
     if transcript and os.path.exists(transcript):
-        # 去掉转写稿的元信息注释行（lzy-video-to-text 带 # 头），否则进 md 会变成一级标题
         tbody = "\n".join(l for l in open(transcript, encoding="utf-8").read().splitlines()
                           if not l.strip().startswith("#")).strip()
 
     mt = data.get("metrics", {}) or {}
-    der = data.get("derived", {}) or {}
     vid = data.get("video_id", "unknown")
     out = args.out or os.path.join(wd, f"单条拆解_{vid}.md")
 
+    vtype = args.type.strip()
+    guide = TYPE_GUIDE.get(vtype)
+
     L = []
-    L.append(f"# 单条拆解 · {data.get('author', {}).get('nickname') or '未知作者'} · {vid}")
+    nick = (data.get("author", {}).get("nickname") or "未知作者").split("\n")[0].strip()[:15]
+    L.append(f"# {nick} · "
+             f"{(data.get('content') or '').split('#')[0].strip()[:24] or '未命名'} · {vid}")
     L.append("")
+    if os.path.exists(os.path.join(wd, f"preview_{vid}.gif")):
+        L.append(f"![原片动图预览（GIF 压缩，无声）](preview_{vid}.gif)")
+        L.append("")
     L.append(f"> 来源：{data.get('url')}  ")
-    L.append(f"> **数据抓取时刻：{data.get('captured_at_human', '—')}**（抖音指标是活的，脱离抓取时间的数字无意义）  ")
+    L.append(f"> **数据抓取时刻：{data.get('captured_at_human', '—')}**  ")
     L.append(f"> 发布：{data.get('publish_time') or '—'}　存续 {data.get('age_days', '—')} 天　"
              f"时长 {(data.get('duration_ms') or 0) / 1000:.1f}s  ")
-    L.append("> 口径：**单条拆解，无对照组**——所有归因是相关性判断，不是因果证明。")
     L.append("")
 
     L.append("## 一、数据快照")
     L.append("")
-    L.append("| 指标 | 数值 | 原始显示 |")
-    L.append("|---|---|---|")
+    L.append("| 指标 | 数值 |")
+    L.append("|---|---|")
     raw = data.get("metrics_raw", {}) or {}
     for zh, k in [("点赞", "likes"), ("评论", "comments"), ("收藏", "collects"), ("转发", "shares")]:
-        L.append(f"| {zh} | {fmt(mt.get(k))} | {raw.get(k) or '—'} |")
-    if der.get("engagement_total") is not None:
-        L.append(f"| 互动总量 | {fmt(der.get('engagement_total'))} | — |")
-    if der.get("likes_per_day") is not None:
-        L.append(f"| 日均赞 | {fmt(der.get('likes_per_day'))} | 赞 ÷ 存续天数 |")
+        L.append(f"| {zh} | {raw.get(k) or fmt(mt.get(k))} |")
     L.append("")
-    L.append("**互动结构（经验阈值，⚠️ 非验证结论，只作线索）**")
-    L.append("")
-    L.append("| 比率 | 值 | 提示 |")
-    L.append("|---|---|---|")
-    L.append(ratio_line(der, mt))
+    L.append("> 抖音数字是活的，引用必须带上方的抓取时刻。")
     L.append("")
 
     L.append("## 二、视频自带文案（标题 + 正文 + 话题）")
@@ -111,85 +117,32 @@ def main():
     L.append("```")
     L.append("")
 
+    L.append("## 三、口播转写全文")
+    L.append("")
     if tbody:
-        L.append("## 三、口播转写全文")
-        L.append("")
         L.append(tbody)
-        L.append("")
+    else:
+        L.append("（未转写/无口播——若为字幕型，逐帧目视拼成 captions_<id>.txt 后重跑本步）")
+    L.append("")
 
-    if tm:
-        f = tm.get("full_text", {})
-        hk = tm.get("hook_window", {})
-        L.append("## 四、文本层指标（程序化提取）")
-        L.append("")
-        L.append(f"- 字数 {f.get('字数')} / 句数 {f.get('句数')} / 平均句长 {f.get('平均句长')} 字")
-        L.append(f"- 时长 {f.get('时长秒')}s / 语速 {f.get('语速_字每秒')} 字每秒 / 短句(≤12字)占比 {f.get('短句占比')}")
-        L.append(f"- 口语连接词 {f.get('口语连接词次数')} 次")
-        L.append("")
-        L.append(f"**钩子窗口**（{hk.get('口径')}）：{hk.get('文本')}")
-        L.append("")
-        L.append("| 信号 | 命中 | 证据 |")
-        L.append("|---|---|---|")
-        for k, v in (hk.get("信号") or {}).items():
-            if v.get("命中"):
-                L.append(f"| {k} | {v['命中']} | {', '.join(map(str, v['证据'][:5]))} |")
-        L.append(f"\n钩子信号种类数：**{hk.get('信号种类数')}**")
-        L.append("")
-        L.append("| 段落 | 字数 | 占比 | 首句 |")
-        L.append("|---|---|---|---|")
-        for s in tm.get("structure", []):
-            L.append(f"| {s['段']} | {s['字数']} | {s['占比']} | {s['首句']} |")
-        L.append("")
-        for name, key in [("CTA 命中", "cta"), ("互动引导", "engage"), ("免责话术", "disclaimer")]:
-            items = tm.get(key) or []
-            s = "、".join(f"{i['词']}×{i['次数']}" for i in items) or "无"
-            L.append(f"- {name}：{s}")
-        L.append("")
-
-    if data.get("top_comments"):
-        L.append("## 五、前排评论（爆款的第二个证据源）")
-        L.append("")
-        for i, c in enumerate(data["top_comments"][:15], 1):
-            L.append(f"{i}. {c}")
-        L.append("")
-
-    files = data.get("files", {}) or {}
-    if files.get("frames_dir"):
-        L.append("## 六、素材索引")
-        L.append("")
-        L.append(f"- 视频：`{files.get('video') or '未下载'}`")
-        L.append(f"- 帧图目录：`{files['frames_dir']}`")
-        L.append("")
-
-    L.append("## 七、爆款归因（八维，主 Agent 填）")
+    L.append("### 逐句亮点标注（每句话在干什么）")
     L.append("")
-    L.append("> 每维必须写三件事：**证据（第几秒/第几句）→ 判读 → 验证程度🔴🟡⚠️**。")
-    L.append("> 🔴 已量化验证（有计数或帧佐证）｜🟡 推断（读稿判断）｜⚠️ 待验证（无对照组，说不清因果）")
+    if guide:
+        L.append(f"> **类型：{vtype}**　分析主线：{guide['主线']}")
+        L.append(f"> 标注词表：{' / '.join(guide['词表'])}")
+        L.append(f"> {guide['提示']}")
+    else:
+        L.append("> ⚠️ 未判类型。**先判类型再写标注**——门诊类走故事角度，口播类走文案角度，套错词表等于白拆。")
+        L.append(">")
+        for line in TYPE_SIGNALS.splitlines():
+            L.append(f"> {line}")
     L.append("")
-    for name, hint, lvl in DIMENSIONS:
-        L.append(f"### {name}　`{lvl}`")
-        L.append("")
-        L.append(f"*判读要点：{hint}*")
-        L.append("")
-        L.append("**证据：**")
-        L.append("")
-        L.append("**判读：**")
-        L.append("")
-    L.append("## 八、可迁移清单（这条里我们能抄的）")
-    L.append("")
-    L.append("| 可迁移点 | 怎么用到自己的号 | 风险/前提 |")
-    L.append("|---|---|---|")
-    L.append("|  |  |  |")
-    L.append("")
-    L.append("## 九、边界与免责")
-    L.append("")
-    L.append("- 单条拆解无对照组，「爆款原因」只能是**强相关因素**，不是因果。")
-    L.append(f"- 数据抓取于 {data.get('captured_at_human', '—')}，之后指标会继续变化，引用请带时间。")
-    L.append("- 转写为 Whisper 本地识别，专有名词可能有错字，引用前对照原视频。")
+    L.append("**（原句）**")
+    L.append("【标注】")
     L.append("")
 
     open(out, "w", encoding="utf-8").write("\n".join(L))
-    print(f"✅ {out}")
+    print(f"✅ {out}" + (f"（类型：{vtype}）" if vtype else "（未判类型）"))
     return 0
 
 
