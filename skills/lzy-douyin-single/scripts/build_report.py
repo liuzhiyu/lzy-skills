@@ -64,6 +64,7 @@ def main():
     ap.add_argument("--workdir", required=True)
     ap.add_argument("--transcript", help="转写 txt 路径，默认工作目录下 script_*.txt")
     ap.add_argument("--type", default="", help="视频类型：口播类/门诊类/科普类/人设类")
+    ap.add_argument("--fit", default="", help="适合科室（如「全部科室」「骨科/康复科」）")
     ap.add_argument("--out", help="输出 md 路径")
     args = ap.parse_args()
 
@@ -98,6 +99,14 @@ def main():
     if os.path.exists(os.path.join(wd, f"preview_{vid}.gif")):
         L.append(f"![原片动图预览（GIF 压缩，无声）](preview_{vid}.gif)")
         L.append("")
+    # 类型 + 适合科室：这条能不能被别人抄，先看这两栏
+    if vtype or args.fit:
+        L.append(f"> **类型：{vtype or '（待判）'}**"
+                 + (f"　|　**适合科室：{args.fit}**" if args.fit else "　|　**适合科室：（待补）**"))
+        if not args.fit:
+            L.append("> 待补口径：这条的爆点**依赖专科知识吗**？依赖 → 写具体科室；不依赖（靠身份/喊话/结构）→ "
+                     "写「全部科室」，并说明那个可替换的锚点是什么。")
+        L.append(">")
     L.append(f"> 来源：{data.get('url')}  ")
     L.append(f"> **数据抓取时刻：{data.get('captured_at_human', '—')}**  ")
     L.append(f"> 发布：{data.get('publish_time') or '—'}　存续 {data.get('age_days', '—')} 天　"
@@ -124,16 +133,19 @@ def main():
         else:
             line = RATIO_LINE[dk]
             pct = f"{ratio * 100:.1f}%"
-            if ratio >= line * 1.3:
-                flag, word = "🔴", "很高"
-            elif ratio >= line:
+            # 只分两档：超线 = 🔴 偏高，不足 0.6 倍 = 偏低。别再细分「很高」——
+            # 实测阈值会把 1.29 倍和 1.30 倍分成两档，那是自欺。
+            if ratio >= line:
                 flag, word = "🔴", "偏高"
             elif ratio >= line * 0.6:
                 flag, word = "", "正常"
             else:
                 flag, word = "", "偏低"
             note = f"{RATIO_ZH[dk]} **{pct}** {flag} {word}（经验线 {line * 100:.0f}%）"
-        L.append(f"| {zh} | {raw.get(k) or fmt(mt.get(k))} | {note} |")
+        rv = raw.get(k) or fmt(mt.get(k))
+        if rv.isdigit():                      # 纯数字统一加千分位，带「万」的原样保留
+            rv = fmt(int(rv))
+        L.append(f"| {zh} | {rv} | {note} |")
     L.append("")
     L.append("> 抖音数字是活的，引用必须带上方的抓取时刻。"
              "比率只标偏离，正常项不展开。")
