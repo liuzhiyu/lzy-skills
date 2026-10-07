@@ -42,19 +42,21 @@ if [ -z "$SID" ]; then echo "❌ bsk session 创建失败（daemon 没起？跑 
 "$BSK" navigate "$PAGE_URL" --session "$SID" --wait-until domcontentloaded --timeout 30000 >/dev/null 2>&1
 sleep 5
 
-# --- 1) 轮询等视频流直链出现（最多 24s），拿到立刻下载 ---
+# --- 1) 轮询等视频流直链出现（最多 55s）---
+# ⚠️ 只认 http 开头的 src：页面初期 currentSrc 是 blob:（MSE 流），拿 blob: 去 curl 必败；
+#    长视频（>1min）直链实测 20s+ 才出现，轮询上限别低于 50s。
 SRC=""
-for i in $(seq 1 12); do
+for i in $(seq 1 18); do
   ONE=$("$BSK" evaluate --session "$SID" \
-    "JSON.stringify(((document.querySelector('video')||{}).currentSrc)||'')" 2>/dev/null | tail -1 | tr -d '"')
-  if [ -n "$ONE" ] && [ "$ONE" != "null" ] && [ "$ONE" != "{}" ]; then SRC="$ONE"; break; fi
-  sleep 2
+    "(()=>{const v=document.querySelector('video');if(!v)return '';const s=v.currentSrc||'';return s.startsWith('http')?s:'';})()" 2>/dev/null | tail -1 | tr -d '"' | tr -d '\n')
+  if [ -n "$ONE" ] && [ ${#ONE} -gt 60 ]; then SRC="$ONE"; break; fi
+  sleep 3
 done
-[ -z "$SRC" ] && echo "⚠️ 24s 内未取到视频流直链（未登录抖音？或该条不可下载）"
+[ -z "$SRC" ] && echo "⚠️ 55s 内未取到视频直链（未登录抖音？或该条不可下载）"
 
 MP4="$WORKDIR/v_${VID}.mp4"
 if [ -n "$SRC" ]; then
-  curl -fsSL --retry 3 --max-time 180 \
+  curl -fsSL --retry 3 --max-time 300 \
     -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
     -H "Referer: https://www.douyin.com/" \
     -o "$MP4" "$SRC" 2>/dev/null
